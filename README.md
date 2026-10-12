@@ -13,9 +13,18 @@ Interfaz mobile-first con datos **ficticios** y flujos funcionales:
 - Formulario de evaluación: seis criterios con notas enteras de 1 a 5.
 - Creación de objetivos individuales y actualización de su progreso.
 
+**Puntuación:** cada criterio se puntúa con un entero de 1 a 5. La puntuación
+global es `round(media exacta × 20)`, con rango **20–100** (nota 1 → 20, nota 5 → 100).
+La media se muestra con un decimal; ver `src/lib/dominio.ts`.
+
+**404:** `src/proxy.ts` devuelve un 404 real para fichas de jugadores que no
+existen (con Cache Components, `notFound()` en la página llegaba tarde y el
+código era 200).
+
 Todavía no hay base de datos, autenticación ni pagos. Los cambios se guardan
 solo en el `localStorage` del navegador (`src/lib/almacen.tsx`) y se pueden
-deshacer con «Restablecer».
+deshacer con «Restablecer». Lo guardado se valida por completo al cargar; si
+algo no es válido, se descarta y se vuelve a los datos iniciales.
 
 ## Desarrollo
 

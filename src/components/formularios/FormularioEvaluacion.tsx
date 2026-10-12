@@ -8,11 +8,12 @@ import {
   jugadores,
   jugadorPorId,
   TIPOS_EVALUACION,
+  type CriterioId,
   type Nota,
 } from "@/lib/demo-data";
 import { nuevoId, useAlmacen } from "@/lib/almacen";
-import { esNota, MAX_COMENTARIO, validarEvaluacion } from "@/lib/dominio";
-import { hoyIso } from "@/lib/format";
+import { esNota, MAX_COMENTARIO, mediaNotas, puntuacionGlobal, validarEvaluacion } from "@/lib/dominio";
+import { hoyIso, textoMedia } from "@/lib/format";
 import { Cabecera, claseBoton, EtiquetaFicticio } from "@/components/ui";
 import { Campo, claseCampo, enfocarPrimerError, MensajeError } from "@/components/formularios/campos";
 
@@ -46,10 +47,8 @@ function FormularioEvaluacion() {
   const [errores, setErrores] = useState<Record<string, string>>({});
 
   const valoradas = CRITERIOS.filter((c) => esNota(notas[c.id])).length;
-  const media =
-    valoradas > 0
-      ? CRITERIOS.reduce((s, c) => s + (notas[c.id] ?? 0), 0) / valoradas
-      : null;
+  const media = mediaNotas(notas);
+  const completa = valoradas === CRITERIOS.length;
 
   function enviar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -125,16 +124,21 @@ function FormularioEvaluacion() {
             return (
               <fieldset
                 key={c.id}
+                role="radiogroup"
+                aria-labelledby={`${c.id}-nombre`}
+                aria-invalid={error ? true : undefined}
                 aria-describedby={error ? `${c.id}-error` : undefined}
                 className={`rounded-2xl bg-noche-700 p-4 ring-1 ${error ? "ring-naranja" : "ring-noche-500"}`}
               >
-                <legend className="sr-only">{c.nombre}</legend>
+                <legend id={`${c.id}-nombre`} className="sr-only">
+                  {c.nombre}
+                </legend>
                 <div aria-hidden="true" className="mb-3 flex items-baseline justify-between gap-3">
                   <span className="font-semibold">{c.nombre}</span>
                   <span className="text-xs text-tenue">{valor ? `${valor} · ${ESCALA[valor]}` : c.area}</span>
                 </div>
                 <div className="grid grid-cols-5 gap-2">
-                  {NOTAS.map((n, i) => (
+                  {NOTAS.map((n) => (
                     <label key={n} className="relative">
                       <input
                         type="radio"
@@ -146,7 +150,6 @@ function FormularioEvaluacion() {
                           setErrores((prev) => sinClave(prev, c.id));
                         }}
                         aria-label={`${c.nombre}: ${n} (${ESCALA[n]})`}
-                        aria-invalid={i === 0 && !!error ? true : undefined}
                         className="peer absolute inset-0 size-full cursor-pointer opacity-0"
                       />
                       <span
@@ -183,15 +186,26 @@ function FormularioEvaluacion() {
 
         <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] -mx-4 border-t border-noche-500 bg-noche/95 px-4 py-3 backdrop-blur md:bottom-0">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-tenue" aria-live="polite">
+            <p className="min-w-0 text-xs leading-snug text-tenue sm:text-sm" aria-live="polite">
               {valoradas}/{CRITERIOS.length} criterios
               {media !== null && (
                 <>
-                  {" · "}media <span className="font-bold text-blanco">{media.toFixed(1).replace(".", ",")}</span>
+                  {" · "}media <span className="font-bold text-blanco">{textoMedia(media)}</span>
+                  {completa && (
+                    <>
+                      {" · "}
+                      <span className="whitespace-nowrap">
+                        <span className="font-bold text-blanco">
+                          {puntuacionGlobal(notas as Record<CriterioId, Nota>)}
+                        </span>{" "}
+                        pts
+                      </span>
+                    </>
+                  )}
                 </>
               )}
             </p>
-            <button type="submit" className={claseBoton.primario}>
+            <button type="submit" className={`${claseBoton.primario} shrink-0 whitespace-nowrap`}>
               Guardar evaluación
             </button>
           </div>

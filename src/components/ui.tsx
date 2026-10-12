@@ -46,7 +46,7 @@ export function Seccion({
         {enlace && (
           <Link
             href={enlace.href}
-            className="flex items-center gap-0.5 text-sm font-semibold text-electrico"
+            className="-my-3 -mr-2 flex min-h-11 items-center gap-0.5 px-2 text-sm font-semibold text-electrico"
           >
             {enlace.texto}
             <IconFlecha className="size-4" />

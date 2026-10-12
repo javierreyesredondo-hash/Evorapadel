@@ -36,7 +36,7 @@ export function Inicio() {
         {urgentes > 0 && (
           <Link
             href="/evaluaciones"
-            className="mt-4 inline-flex items-center gap-2 rounded-full bg-noche px-4 py-2 text-sm font-bold text-blanco"
+            className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-noche px-4 text-sm font-bold text-blanco"
           >
             <span className="size-2 rounded-full bg-naranja" aria-hidden="true" />
             {urgentes} {urgentes === 1 ? "evaluación urgente" : "evaluaciones urgentes"}

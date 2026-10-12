@@ -3,7 +3,7 @@
 import { CRITERIOS, ESCALA, jugadorPorId } from "@/lib/demo-data";
 import { useAlmacen } from "@/lib/almacen";
 import { evaluacionesDe, mediaNotas, resumenJugador } from "@/lib/dominio";
-import { textoFecha } from "@/lib/format";
+import { textoFecha, textoMedia } from "@/lib/format";
 import {
   Avatar,
   EnlaceBoton,
@@ -48,7 +48,9 @@ export function FichaJugador({ id }: { id: string }) {
 
       <dl className="mt-5 grid grid-cols-3 gap-3">
         <div className="rounded-2xl bg-noche-700 p-3 ring-1 ring-noche-500">
-          <dt className="text-xs text-tenue">Puntuación</dt>
+          <dt className="text-xs text-tenue">
+            Puntuación <span className="sr-only">(de 20 a 100)</span>
+          </dt>
           <dd className="mt-1 font-display text-3xl font-bold leading-none">{resumen.puntuacion ?? "—"}</dd>
         </div>
         <div className="rounded-2xl bg-noche-700 p-3 ring-1 ring-noche-500">
@@ -90,7 +92,7 @@ export function FichaJugador({ id }: { id: string }) {
           <div className="rounded-2xl bg-noche-700 p-4 ring-1 ring-noche-500">
             <p className="text-sm text-tenue">
               {ultima.tipo} · {textoFecha(ultima.fecha)} · Media{" "}
-              <span className="font-semibold text-blanco">{mediaNotas(ultima.notas).toLocaleString("es-ES")}</span>
+              <span className="font-semibold text-blanco">{textoMedia(mediaNotas(ultima.notas) ?? 0)}</span>
             </p>
             <ul className="mt-3 space-y-2.5" aria-label="Notas por criterio">
               {CRITERIOS.map((c) => {

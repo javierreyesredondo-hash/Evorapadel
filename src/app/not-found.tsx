@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import { EnlaceBoton } from "@/components/ui";
+
+export const metadata: Metadata = { title: "Página no encontrada" };
 
 export default function NoEncontrado() {
   return (

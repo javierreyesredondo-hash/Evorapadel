@@ -60,7 +60,13 @@ export function ProveedorAlmacen({ children }: { children: ReactNode }) {
   useEffect(() => {
     let guardado: Estado | null = null;
     try {
-      guardado = deserializarEstado(window.localStorage.getItem(CLAVE_ALMACEN));
+      const texto = window.localStorage.getItem(CLAVE_ALMACEN);
+      guardado = deserializarEstado(texto);
+      if (texto !== null && guardado === null) {
+        // Datos dañados o de otra versión: se descartan y se vuelve a los
+        // datos iniciales (se sobrescriben en el siguiente guardado).
+        console.warn("ÉVORA PADEL: datos guardados de la demo no válidos; se usan los datos iniciales.");
+      }
     } catch {
       // Almacenamiento bloqueado (modo privado, permisos): seguimos en memoria.
     }

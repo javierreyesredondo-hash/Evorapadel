@@ -20,7 +20,7 @@ function Chip({
       type="button"
       aria-pressed={activo}
       onClick={onClick}
-      className={`min-h-9 shrink-0 rounded-full px-3.5 text-sm font-semibold transition-colors ${
+      className={`min-h-11 shrink-0 rounded-full px-4 text-sm font-semibold transition-colors ${
         activo ? "bg-electrico text-noche" : "bg-noche-700 text-tenue ring-1 ring-noche-500 hover:text-blanco"
       }`}
     >
@@ -42,7 +42,7 @@ export function ListaJugadores() {
 
   return (
     <>
-      <Cabecera titulo="Jugadores" subtitulo="Puntuación de la última evaluación (0–100)" />
+      <Cabecera titulo="Jugadores" subtitulo="Puntuación de la última evaluación (20–100)" />
 
       <div role="search" className="space-y-3">
         <label htmlFor="buscar" className="sr-only">
@@ -82,7 +82,7 @@ export function ListaJugadores() {
           <button
             type="button"
             onClick={() => setFiltros(FILTROS_VACIOS)}
-            className="text-sm font-semibold text-electrico"
+            className="-my-3 -mr-2 inline-flex min-h-11 items-center px-2 text-sm font-semibold text-electrico"
           >
             Limpiar filtros
           </button>

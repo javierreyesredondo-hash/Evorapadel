@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { esperar404EnConsola, expect, test } from "./fixtures";
 
 // Cada test arranca con un navegador limpio (localStorage vacío), así que
 // parte siempre de los datos ficticios iniciales.
@@ -55,12 +56,27 @@ test.describe("Ficha de jugador", () => {
     await expect(page.getByRole("list", { name: "Historial de evaluaciones" }).getByRole("listitem")).toHaveCount(2);
   });
 
-  test("un jugador inexistente muestra la página 404 (no indexable)", async ({ page }) => {
-    // Con Cache Components el 404 llega en streaming: el código HTTP es 200,
-    // pero se pinta la página de no encontrado y Next añade «noindex».
-    await page.goto("/jugadores/no-existe");
-    await expect(page.getByRole("heading", { name: "Página no encontrada" })).toBeVisible();
-    await expect(page.locator('meta[name="robots"][content="noindex"]').first()).toBeAttached();
+  test("un jugador inexistente responde 404 real y muestra la página en español (regresión)", async ({ page }) => {
+    esperar404EnConsola();
+    // Antes: código 200 con la página de no encontrado en streaming.
+    for (const ruta of ["/jugadores/no-existe", "/jugadores/J1", "/jugadores/j1%20", "/jugadores/%E0%A4%A", "/jugadores/j1/extra"]) {
+      const respuesta = await page.goto(ruta);
+      expect(respuesta?.status(), ruta).toBe(404);
+      await expect(page.getByRole("heading", { level: 1, name: "Página no encontrada" })).toBeVisible();
+      await expect(page).toHaveTitle("Página no encontrada · ÉVORA PADEL");
+      await expect(page.getByRole("link", { name: "Ver jugadores" })).toBeVisible();
+    }
+    // Desde la 404 se vuelve a la app.
+    await page.getByRole("link", { name: "Ver jugadores" }).click();
+    await expect(page).toHaveURL(/\/jugadores$/);
+  });
+
+  test("las fichas existentes siguen respondiendo 200", async ({ page }) => {
+    for (const id of ["j1", "j2", "j3", "j4", "j5", "j6"]) {
+      const respuesta = await page.goto(`/jugadores/${id}`);
+      expect(respuesta?.status(), id).toBe(200);
+      await expect(page.getByText("Ficticio", { exact: true })).toBeVisible();
+    }
   });
 });
 
@@ -79,6 +95,10 @@ test.describe("Evaluaciones", () => {
     await expect(page.getByText("Revisa los campos marcados.")).toBeVisible();
     await expect(page.getByText("Puntúa de 1 a 5.")).toHaveCount(6);
     await expect(page.getByRole("radio", { name: "Golpes de fondo: 1 (Inicial)" })).toBeFocused();
+    // El grupo entero se marca inválido y apunta a su mensaje.
+    const grupo = page.getByRole("radiogroup", { name: "Golpes de fondo" });
+    await expect(grupo).toHaveAttribute("aria-invalid", "true");
+    await expect(grupo).toHaveAccessibleDescription("Puntúa de 1 a 5.");
 
     const notas = { "Golpes de fondo": 4, "Juego en la red": 3, "Juego aéreo": 3, "Lectura táctica": 4, "Condición física": 5, "Fortaleza mental": 4 };
     for (const [criterio, nota] of Object.entries(notas)) {
@@ -86,7 +106,8 @@ test.describe("Evaluaciones", () => {
     }
     await expect(page.getByText("Puntúa de 1 a 5.")).toHaveCount(0);
     await expect(page.getByText("6/6 criterios")).toBeVisible();
-    await expect(page.getByText(/media\s*3,8/)).toBeVisible();
+    // Media mostrada con un decimal (3,8); puntos con la media exacta 23/6 → 77.
+    await expect(page.getByText(/media\s*3,8\s*·\s*77\s*pts/)).toBeVisible();
 
     await page.getByLabel("Comentario (opcional)").fill("Buena sesión de prueba.");
     await page.getByRole("button", { name: "Guardar evaluación" }).click();
@@ -117,7 +138,7 @@ test.describe("Evaluaciones", () => {
 
   test("solo ofrece puntuaciones enteras de 1 a 5", async ({ page }) => {
     await page.goto("/evaluaciones/nueva?jugador=j1");
-    const radios = page.getByRole("group", { name: "Juego aéreo" }).getByRole("radio");
+    const radios = page.getByRole("radiogroup", { name: "Juego aéreo" }).getByRole("radio");
     await expect(radios).toHaveCount(5);
     for (const [i, valor] of ["1", "2", "3", "4", "5"].entries()) {
       await expect(radios.nth(i)).toHaveAttribute("value", valor);
@@ -208,9 +229,41 @@ test.describe("Persistencia en el navegador", () => {
     await expect(fila()).toContainText("9 de 10");
   });
 
-  test("ignora datos guardados corruptos y arranca con los ficticios", async ({ page }) => {
-    await page.addInitScript(() => window.localStorage.setItem("evora-padel-demo-v1", "{roto"));
-    await page.goto("/objetivos");
-    await expect(page.getByRole("listitem").filter({ hasText: "Remates por 3 ganadores" })).toContainText("7 de 10");
-  });
+  const malformados: Record<string, (e: Record<string, unknown[]>) => void> = {
+    "JSON inválido": () => {},
+    "pendiente nula": (e) => (e.pendientes![0] = null),
+    "fecha inválida": (e) => ((e.evaluaciones![0] as Record<string, unknown>).fecha = "abc"),
+    "nota fuera de rango": (e) => (((e.evaluaciones![0] as Record<string, unknown>).notas as Record<string, unknown>).fondo = 9),
+    "jugador inexistente": (e) => ((e.objetivos![0] as Record<string, unknown>).jugadorId = "j999"),
+    "progreso mayor que la meta": (e) => ((e.objetivos![0] as Record<string, unknown>).progreso = 99),
+    "área no permitida": (e) => ((e.objetivos![0] as Record<string, unknown>).area = "Nutrición"),
+  };
+
+  for (const [caso, romper] of Object.entries(malformados)) {
+    test(`descarta datos guardados mal formados sin romper la interfaz: ${caso}`, async ({ page }) => {
+      // Estado guardado válido (se captura de la app) y luego se estropea.
+      await page.goto("/objetivos");
+      const leer = () => page.evaluate(() => window.localStorage.getItem("evora-padel-demo-v1"));
+      // La app guarda tras leer el almacenamiento (en un efecto): esperar a que exista.
+      await expect.poll(leer).not.toBeNull();
+      const estado = JSON.parse((await leer())!) as Record<string, unknown[]>;
+      (estado.objetivos![0] as Record<string, unknown>).progreso = 3; // marca para ver si se usa
+      romper(estado);
+      const guardar = caso === "JSON inválido" ? "{roto" : JSON.stringify(estado);
+      await page.evaluate((v) => window.localStorage.setItem("evora-padel-demo-v1", v), guardar);
+
+      const avisos: string[] = [];
+      page.on("console", (m) => m.type() === "warning" && avisos.push(m.text()));
+      for (const ruta of ["/objetivos", "/", "/jugadores/j1", "/evaluaciones"]) {
+        await page.goto(ruta);
+        await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+      }
+      // Se usan los datos iniciales (7 de 10), no los guardados (3 de 10).
+      await page.goto("/objetivos");
+      await expect(page.getByRole("listitem").filter({ hasText: "Remates por 3 ganadores" })).toContainText("7 de 10");
+      expect(avisos.some((a) => a.includes("no válidos"))).toBe(true);
+      // Y lo guardado queda sustituido por un estado válido.
+      await expect.poll(async () => JSON.parse((await leer()) ?? "{}").objetivos?.[0]?.progreso).toBe(7);
+    });
+  }
 });
