@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -49,3 +50,7 @@ next-env.d.ts
 # supabase cli (local)
 /supabase/.temp/
 /supabase/.branches/
+
+# supabase local (scripts/supabase-local.mjs)
+/.cache/
+/e2e/.auth/

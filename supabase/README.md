@@ -118,8 +118,8 @@ Después de aplicarla:
 Desde la app nadie puede crear escuelas ni darse de alta como director. Se hace
 **a mano, una vez por escuela**, con un procedimiento de la migración 2:
 
-1. El director se registra en Supabase Auth con su email (desde la app cuando
-   exista el registro, o en *Authentication → Users → Add user*).
+1. Crear el usuario del director en *Authentication → Users → Add user*
+   (la app no tiene registro público).
 2. En el *SQL Editor* de Supabase (actúa como `postgres`), ejecutar:
 
    ```sql
@@ -140,10 +140,65 @@ Qué garantiza:
 - Solo la puede ejecutar `postgres`. `anon`, `authenticated` y `service_role`
   no tienen permiso (las pruebas lo comprueban).
 
+## Conectar la app (Fase 3)
+
+La app usa `@supabase/ssr` con la URL y la clave **pública** (ver `.env.example`):
+
+1. *Project Settings → API*: copiar la URL del proyecto y la *publishable key*
+   (o la *anon key*).
+2. Ponerlas en `.env.local` (desarrollo) y en Vercel → *Settings → Environment
+   Variables* (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`).
+   Después, **volver a desplegar** (se incrustan al compilar).
+3. *Authentication → Sign In / Providers*: **desactivar «Allow new users to sign
+   up»**. La app no muestra registro, pero con la clave pública cualquiera podría
+   llamar directamente a la API de registro de Supabase. Un usuario así no vería
+   ninguna escuela (RLS), pero conviene cerrarlo.
+4. *Authentication → URL Configuration*: *Site URL* con el dominio de la app.
+5. Los usuarios se crean en *Authentication → Users → Add user*, y su escuela
+   y rol según «Alta de la primera escuela y su director».
+
+### Verificación obligatoria antes de usar el proyecto `idzkjzpgijzwmtpumcwk`
+
+Desde el entorno de desarrollo **no se ha podido acceder** al proyecto alojado
+(red bloqueada y sin credenciales), así que su esquema **no está comprobado**.
+La app espera exactamente el de las migraciones de esta carpeta. En el *SQL
+Editor* (solo lectura):
+
+```sql
+select table_name from information_schema.tables
+ where table_schema = 'public' order by 1;
+-- Esperado: escuelas, grupo_jugadores, grupos, jugadores, membresias, perfiles
+
+select column_name, data_type from information_schema.columns
+ where table_schema = 'public' and table_name in ('escuelas', 'membresias', 'perfiles')
+ order by table_name, ordinal_position;
+
+select tablename, rowsecurity from pg_tables where schemaname = 'public';
+-- rowsecurity = true en todas
+
+select count(*) from public.membresias m join auth.users u on u.id = m.usuario_id;
+```
+
+Si faltan tablas o columnas, hay tablas de la versión anterior de la app, o
+`membresias.rol` no admite `director`/`entrenador`: **no tocar la base de datos**
+y revisarlo antes. Si el esquema no coincide, la app muestra «No se ha podido
+cargar tu escuela» y lo registra en el servidor (`PGRST2xx` / `42P01`).
+
+### Supabase local para las pruebas
+
+`npm run supabase:local` (Docker) levanta PostgreSQL 17 y Auth (GoTrue) de
+Supabase, PostgREST y una pasarela mínima en `127.0.0.1:54321` que imita las
+rutas de Kong (`/auth/v1`, `/rest/v1`). Aplica las dos migraciones y crea, con
+`privado.crear_escuela_con_director`, dos escuelas sintéticas y cuatro usuarios
+`@evora.invalid` (director A, entrenador A, director B y uno sin escuela). Las
+claves se generan en cada arranque y solo sirven en local. `npm run
+supabase:local:parar` lo detiene.
+
 ## Secretos
 
 - **Nunca** subir al repositorio claves de Supabase. `.env*` ya está en `.gitignore`.
 - La clave `service_role` (o *secret key*) salta RLS: solo en el servidor, jamás
   en el navegador ni con prefijo `NEXT_PUBLIC_`.
-- En el navegador solo irán la URL del proyecto y la clave pública
-  (*anon* / *publishable*), configuradas en Vercel cuando se conecte la app.
+- En el navegador solo van la URL del proyecto y la clave pública
+  (*anon* / *publishable*). `src/lib/acceso.ts` rechaza una clave `sb_secret_…`
+  o un JWT con rol `service_role` en esas variables.

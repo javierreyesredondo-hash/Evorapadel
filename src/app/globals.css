@@ -19,6 +19,17 @@
 
 html {
   color-scheme: dark;
+  /* En móvil, la cabecera y la barra inferior son fijas: al desplazar a un
+     elemento (foco, anclas, scrollIntoView) se deja su espacio libre. */
+  scroll-padding-top: 4.5rem;
+  scroll-padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+}
+
+@media (width >= 48rem) {
+  html {
+    scroll-padding-top: 0;
+    scroll-padding-bottom: 0;
+  }
 }
 
 body {

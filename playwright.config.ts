@@ -1,8 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Pruebas de extremo a extremo sobre la build de producción.
-// Ejecutar con `npm run test:e2e` (compila y luego prueba).
+// Pruebas de extremo a extremo sobre la build de producción, contra el
+// Supabase LOCAL (npm run supabase:local). Ejecutar con `npm run test:e2e`.
 const PUERTO = 3100;
+export const SESION_DIRECTOR_A = "e2e/.auth/director-a.json";
+
+const conSesion = { storageState: SESION_DIRECTOR_A };
+const sinSesion = /(acceso|rls)\.spec\.ts|sesion\.setup\.ts/;
 
 export default defineConfig({
   testDir: "e2e",
@@ -15,15 +19,23 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [
-    // Viewport móvil principal (390 × 844, táctil). Chromium es el único navegador instalado.
-    { name: "movil", use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 } } },
-    { name: "movil-pequeno", use: { ...devices["Pixel 7"], viewport: { width: 360, height: 640 } }, grep: /@movil/ },
-    { name: "escritorio", use: { ...devices["Desktop Chrome"] }, grep: /@escritorio/ },
+    // Inicia sesión una vez (director de la Escuela Demo A) y guarda la sesión.
+    { name: "sesion", testMatch: /sesion\.setup\.ts/ },
+    // Acceso, redirecciones y aislamiento entre escuelas: sin sesión previa.
+    { name: "acceso", testMatch: /(acceso|rls)\.spec\.ts/, use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 } } },
+    // Pantallas de la app (Fase 2), ya con sesión. Chromium es el único navegador instalado.
+    { name: "movil", dependencies: ["sesion"], testIgnore: sinSesion,
+      use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, ...conSesion } },
+    { name: "movil-pequeno", dependencies: ["sesion"], testIgnore: sinSesion, grep: /@movil/,
+      use: { ...devices["Pixel 7"], viewport: { width: 360, height: 640 }, ...conSesion } },
+    { name: "escritorio", dependencies: ["sesion"], testIgnore: sinSesion, grep: /@escritorio/,
+      use: { ...devices["Desktop Chrome"], ...conSesion } },
   ],
   webServer: {
     command: `npx next start -p ${PUERTO}`,
-    url: `http://localhost:${PUERTO}`,
-    reuseExistingServer: !process.env.CI,
+    url: `http://localhost:${PUERTO}/acceso`,
+    // Nunca reutilizar un servidor previo: podría servir una build antigua.
+    reuseExistingServer: false,
     timeout: 60_000,
   },
 });
