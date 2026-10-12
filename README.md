@@ -4,11 +4,27 @@
 
 Plataforma internacional de metodología y desarrollo de jugadores de pádel.
 
-## Estado: Fase 1
+## Estado: Fase 2
 
-Primera versión de la interfaz (mobile-first) con datos **ficticios**:
-panel de inicio, jugadores, evaluaciones pendientes y objetivos.
-Todavía no hay base de datos, autenticación ni pagos.
+Interfaz mobile-first con datos **ficticios** y flujos funcionales:
+
+- Búsqueda (sin distinguir tildes) y filtros por nivel y posición.
+- Ficha de cada jugador: datos, última evaluación por criterio, objetivos e historial.
+- Formulario de evaluación: seis criterios con notas enteras de 1 a 5.
+- Creación de objetivos individuales y actualización de su progreso.
+
+**Puntuación:** cada criterio se puntúa con un entero de 1 a 5. La puntuación
+global es `round(media exacta × 20)`, con rango **20–100** (nota 1 → 20, nota 5 → 100).
+La media se muestra con un decimal; ver `src/lib/dominio.ts`.
+
+**404:** `src/proxy.ts` devuelve un 404 real para fichas de jugadores que no
+existen (con Cache Components, `notFound()` en la página llegaba tarde y el
+código era 200).
+
+Todavía no hay base de datos, autenticación ni pagos. Los cambios se guardan
+solo en el `localStorage` del navegador (`src/lib/almacen.tsx`) y se pueden
+deshacer con «Restablecer». Lo guardado se valida por completo al cargar; si
+algo no es válido, se descarta y se vuelve a los datos iniciales.
 
 ## Desarrollo
 
@@ -17,7 +33,8 @@ npm install
 npm run dev        # http://localhost:3000
 npm run lint
 npm run typecheck
-npm test
+npm test           # lógica (node --test)
+npm run test:e2e   # compila y prueba los flujos en Chromium (móvil y escritorio)
 npm run build
 ```
 
