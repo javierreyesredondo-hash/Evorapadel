@@ -2,14 +2,20 @@ import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 
-const RUTAS = [
-  "/",
-  "/jugadores",
-  "/jugadores/j1",
-  "/evaluaciones",
-  "/evaluaciones/nueva?jugador=j1",
-  "/objetivos",
-  "/objetivos/nuevo",
+/** Pantallas con datos reales (Supabase) y de la demostración (ficticias). */
+const RUTAS: [string, RegExp][] = [
+  ["/", /Datos reales de tu escuela/],
+  ["/jugadores", /Datos reales de tu escuela/],
+  ["/jugadores/nuevo", /Datos reales de tu escuela/],
+  ["/grupos", /Datos reales de tu escuela/],
+  ["/grupos/nuevo", /Datos reales de tu escuela/],
+  ["/demo", /Modo demostración/],
+  ["/demo/jugadores", /Modo demostración/],
+  ["/demo/jugadores/j1", /Modo demostración/],
+  ["/demo/evaluaciones", /Modo demostración/],
+  ["/demo/evaluaciones/nueva?jugador=j1", /Modo demostración/],
+  ["/demo/objetivos", /Modo demostración/],
+  ["/demo/objetivos/nuevo", /Modo demostración/],
 ];
 
 /** Zona táctil mínima: 44 × 44 px (recomendación de Apple/WCAG 2.5.5). */
@@ -59,12 +65,15 @@ async function sinInfraccionesAxe(page: Page, contexto: string) {
 }
 
 test.describe("Experiencia móvil @movil", () => {
-  for (const ruta of RUTAS) {
-    test(`${ruta}: cabe en pantalla, barra inferior, aviso de demo, controles táctiles y accesibilidad`, async ({
+  for (const [ruta, modo] of RUTAS) {
+    test(`${ruta}: cabe en pantalla, barra inferior, indicador de modo, controles táctiles y accesibilidad`, async ({
       page,
     }) => {
       await page.goto(ruta);
-      await expect(page.getByText(/Modo demostración/)).toBeVisible();
+      // Siempre queda claro si los datos son reales o de la demostración.
+      await expect(page.getByText(modo)).toBeVisible();
+      // Los datos reales llegan en streaming: esperar al contenido antes de medir.
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       const barra = page.getByRole("navigation", { name: "Principal" });
       await expect(barra).toBeVisible();
       const caja = await barra.boundingBox();
@@ -79,7 +88,7 @@ test.describe("Experiencia móvil @movil", () => {
   }
 
   test("filtros activos y página 404 también cumplen tamaño táctil y accesibilidad", async ({ page }) => {
-    await page.goto("/jugadores");
+    await page.goto("/demo/jugadores");
     await page.getByRole("button", { name: "Avanzado" }).click();
     await page.getByRole("searchbox", { name: "Buscar jugador" }).fill("lu");
     await expect(page.getByRole("button", { name: "Limpiar filtros" })).toBeVisible();
@@ -94,12 +103,12 @@ test.describe("Experiencia móvil @movil", () => {
   });
 
   test("formularios con errores siguen siendo accesibles", async ({ page }) => {
-    await page.goto("/evaluaciones/nueva");
+    await page.goto("/demo/evaluaciones/nueva");
     await page.getByRole("button", { name: "Guardar evaluación" }).click();
     await expect(page.getByText("Revisa los campos marcados.")).toBeVisible();
     await sinInfraccionesAxe(page, "evaluación con errores");
 
-    await page.goto("/objetivos/nuevo");
+    await page.goto("/demo/objetivos/nuevo");
     await page.getByRole("button", { name: "Crear objetivo" }).click();
     await expect(page.getByText("Elige un área.")).toBeVisible();
     await expect(page.getByRole("radiogroup", { name: "Área" })).toHaveAttribute("aria-invalid", "true");
@@ -107,27 +116,27 @@ test.describe("Experiencia móvil @movil", () => {
   });
 
   test("tocar una nota la selecciona y los botones de progreso responden al tacto", async ({ page }) => {
-    await page.goto("/evaluaciones/nueva?jugador=j1");
+    await page.goto("/demo/evaluaciones/nueva?jugador=j1");
     const nota = page.getByRole("radio", { name: "Golpes de fondo: 3 (Competente)" });
     await nota.tap();
     await expect(nota).toBeChecked();
     await expect(page.getByText("Puntúa de 1 a 5.")).toHaveCount(0);
 
-    await page.goto("/objetivos");
+    await page.goto("/demo/objetivos");
     const fila = page.getByRole("listitem").filter({ hasText: "Remates por 3 ganadores" });
     await fila.getByRole("button", { name: /Sumar 1/ }).tap();
     await expect(fila).toContainText("8 de 10");
   });
 
   test("la barra inferior no tapa los botones de guardar", async ({ page }) => {
-    await page.goto("/evaluaciones/nueva?jugador=j1");
+    await page.goto("/demo/evaluaciones/nueva?jugador=j1");
     await noTapado(page, "Guardar evaluación");
-    await page.goto("/objetivos/nuevo");
+    await page.goto("/demo/objetivos/nuevo");
     await noTapado(page, "Crear objetivo");
   });
 
   test("el foco va al primer error aunque esté bajo la barra fija", async ({ page }) => {
-    await page.goto("/evaluaciones/nueva?jugador=j1");
+    await page.goto("/demo/evaluaciones/nueva?jugador=j1");
     await page.getByLabel("Tipo de evaluación").selectOption("Seguimiento");
     for (const c of ["Golpes de fondo", "Juego en la red", "Juego aéreo", "Lectura táctica", "Condición física"]) {
       await page.getByRole("radio", { name: new RegExp(`^${c}: 3 `) }).check();
@@ -145,9 +154,13 @@ test.describe("Experiencia móvil @movil", () => {
     await barra.getByRole("link", { name: "Jugadores" }).tap();
     await expect(page).toHaveURL(/\/jugadores$/);
     await expect(barra.getByRole("link", { name: "Jugadores" })).toHaveAttribute("aria-current", "page");
-    // La ficha cuelga de Jugadores: la pestaña sigue activa.
-    await page.getByRole("list", { name: "Resultados" }).getByRole("link").first().tap();
+    // El alta cuelga de Jugadores: la pestaña sigue activa.
+    await page.getByRole("link", { name: "Nuevo", exact: true }).tap();
+    await expect(page).toHaveURL(/\/jugadores\/nuevo$/);
     await expect(barra.getByRole("link", { name: "Jugadores" })).toHaveAttribute("aria-current", "page");
+    await barra.getByRole("link", { name: "Demo" }).tap();
+    await expect(page).toHaveURL(/\/demo$/);
+    await expect(barra.getByRole("link", { name: "Demo" })).toHaveAttribute("aria-current", "page");
   });
 });
 
@@ -156,10 +169,10 @@ test.describe("Escritorio @escritorio", () => {
     await page.goto("/");
     const navs = page.getByRole("navigation", { name: "Principal" });
     await expect(navs).toHaveCount(1); // solo la lateral es visible para la accesibilidad
-    await navs.getByRole("link", { name: "Objetivos" }).click();
-    await expect(page).toHaveURL(/\/objetivos$/);
-    await expect(navs.getByRole("link", { name: "Objetivos" })).toHaveAttribute("aria-current", "page");
+    await navs.getByRole("link", { name: "Grupos" }).click();
+    await expect(page).toHaveURL(/\/grupos$/);
+    await expect(navs.getByRole("link", { name: "Grupos" })).toHaveAttribute("aria-current", "page");
     await sinDesbordamiento(page);
-    await sinInfraccionesAxe(page, "escritorio /objetivos");
+    await sinInfraccionesAxe(page, "escritorio /grupos");
   });
 });

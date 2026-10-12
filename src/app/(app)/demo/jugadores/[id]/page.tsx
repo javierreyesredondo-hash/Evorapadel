@@ -7,12 +7,12 @@ export function generateStaticParams() {
   return jugadores.map((j) => ({ id: j.id }));
 }
 
-export async function generateMetadata(props: PageProps<"/jugadores/[id]">): Promise<Metadata> {
+export async function generateMetadata(props: PageProps<"/demo/jugadores/[id]">): Promise<Metadata> {
   const { id } = await props.params;
   return { title: jugadorPorId(id)?.nombre ?? "Jugador" };
 }
 
-export default async function Page(props: PageProps<"/jugadores/[id]">) {
+export default async function Page(props: PageProps<"/demo/jugadores/[id]">) {
   const { id } = await props.params;
   if (!jugadorPorId(id)) notFound();
   return <FichaJugador id={id} />;

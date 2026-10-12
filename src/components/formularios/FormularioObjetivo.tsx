@@ -36,7 +36,7 @@ function FormularioObjetivo() {
     }
     despachar({ tipo: "crearObjetivo", objetivo: r.valor });
     mostrarAviso("Objetivo creado");
-    router.push(`/jugadores/${jugadorId}`);
+    router.push(`/demo/jugadores/${jugadorId}`);
   }
 
   const invalido = (campo: string) => ({

@@ -17,9 +17,9 @@ export function Inicio() {
     .slice(0, 3);
 
   const datos = [
-    { valor: jugadores.length, texto: "Jugadores", href: "/jugadores" },
-    { valor: estado.pendientes.length, texto: "Evaluaciones pendientes", href: "/evaluaciones" },
-    { valor: activos.length, texto: "Objetivos activos", href: "/objetivos" },
+    { valor: jugadores.length, texto: "Jugadores", href: "/demo/jugadores" },
+    { valor: estado.pendientes.length, texto: "Evaluaciones pendientes", href: "/demo/evaluaciones" },
+    { valor: activos.length, texto: "Objetivos activos", href: "/demo/objetivos" },
   ];
 
   return (
@@ -35,7 +35,7 @@ export function Inicio() {
         </h1>
         {urgentes > 0 && (
           <Link
-            href="/evaluaciones"
+            href="/demo/evaluaciones"
             className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-noche px-4 text-sm font-bold text-blanco"
           >
             <span className="size-2 rounded-full bg-naranja" aria-hidden="true" />
@@ -62,7 +62,7 @@ export function Inicio() {
         ))}
       </ul>
 
-      <Seccion titulo="Evaluaciones pendientes" enlace={{ href: "/evaluaciones", texto: "Ver todas" }}>
+      <Seccion titulo="Evaluaciones pendientes" enlace={{ href: "/demo/evaluaciones", texto: "Ver todas" }}>
         {estado.pendientes.length > 0 ? (
           <Lista>
             {estado.pendientes.slice(0, 3).map((e) => (
@@ -74,7 +74,7 @@ export function Inicio() {
         )}
       </Seccion>
 
-      <Seccion titulo="Objetivos" enlace={{ href: "/objetivos", texto: "Ver todos" }}>
+      <Seccion titulo="Objetivos" enlace={{ href: "/demo/objetivos", texto: "Ver todos" }}>
         {activos.length > 0 ? (
           <Lista>
             {activos.slice(0, 3).map((o) => (
@@ -86,7 +86,7 @@ export function Inicio() {
         )}
       </Seccion>
 
-      <Seccion titulo="Más progreso" enlace={{ href: "/jugadores", texto: "Jugadores" }}>
+      <Seccion titulo="Más progreso" enlace={{ href: "/demo/jugadores", texto: "Jugadores" }}>
         <Lista>
           {destacados.map((d) => (
             <FilaJugador key={d.jugador.id} jugador={d.jugador} puntuacion={d.puntuacion} tendencia={d.tendencia} />

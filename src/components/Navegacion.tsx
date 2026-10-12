@@ -2,27 +2,40 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  IconEvaluaciones,
-  IconInicio,
-  IconJugadores,
-  IconObjetivos,
-} from "@/components/icons";
+import { Suspense, type ReactNode } from "react";
+import { IconDemo, IconGrupos, IconInicio, IconJugadores } from "@/components/icons";
 
 const enlaces = [
   { href: "/", texto: "Inicio", Icono: IconInicio },
   { href: "/jugadores", texto: "Jugadores", Icono: IconJugadores },
-  { href: "/evaluaciones", texto: "Evaluaciones", Icono: IconEvaluaciones },
-  { href: "/objetivos", texto: "Objetivos", Icono: IconObjetivos },
+  { href: "/grupos", texto: "Grupos", Icono: IconGrupos },
+  // Evaluaciones y objetivos: solo en la demostración (datos ficticios).
+  { href: "/demo", texto: "Demo", Icono: IconDemo },
 ] as const;
 
-function esActivo(pathname: string, href: string) {
+function esActivo(pathname: string | null, href: string) {
+  if (pathname === null) return false;
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
+}
+
+// usePathname() es dato de petición en rutas con parámetros dinámicos
+// (/jugadores/[id], /grupos/[id]): tras Suspense, con la misma barra sin
+// pestaña activa como respaldo para que no haya saltos.
+function ConRuta({ Vista }: { Vista: (p: { pathname: string | null }) => ReactNode }) {
+  const pathname = usePathname();
+  return <Vista pathname={pathname} />;
 }
 
 /** Barra inferior en móvil. */
 export function NavegacionInferior() {
-  const pathname = usePathname();
+  return (
+    <Suspense fallback={<BarraInferior pathname={null} />}>
+      <ConRuta Vista={BarraInferior} />
+    </Suspense>
+  );
+}
+
+function BarraInferior({ pathname }: { pathname: string | null }) {
   return (
     <nav
       aria-label="Principal"
@@ -53,7 +66,14 @@ export function NavegacionInferior() {
 
 /** Menú lateral en escritorio. */
 export function NavegacionLateral() {
-  const pathname = usePathname();
+  return (
+    <Suspense fallback={<MenuLateral pathname={null} />}>
+      <ConRuta Vista={MenuLateral} />
+    </Suspense>
+  );
+}
+
+function MenuLateral({ pathname }: { pathname: string | null }) {
   return (
     <nav aria-label="Principal" className="mt-8">
       <ul className="space-y-1">

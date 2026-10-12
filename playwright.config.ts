@@ -6,7 +6,7 @@ const PUERTO = 3100;
 export const SESION_DIRECTOR_A = "e2e/.auth/director-a.json";
 
 const conSesion = { storageState: SESION_DIRECTOR_A };
-const sinSesion = /(acceso|rls)\.spec\.ts|sesion\.setup\.ts/;
+const sinSesion = /(acceso|rls|gestion)\.spec\.ts|sesion\.setup\.ts/;
 
 export default defineConfig({
   testDir: "e2e",
@@ -21,9 +21,10 @@ export default defineConfig({
   projects: [
     // Inicia sesión una vez (director de la Escuela Demo A) y guarda la sesión.
     { name: "sesion", testMatch: /sesion\.setup\.ts/ },
-    // Acceso, redirecciones y aislamiento entre escuelas: sin sesión previa.
-    { name: "acceso", testMatch: /(acceso|rls)\.spec\.ts/, use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 } } },
-    // Pantallas de la app (Fase 2), ya con sesión. Chromium es el único navegador instalado.
+    // Acceso, aislamiento entre escuelas y datos reales (jugadores y grupos):
+    // cada prueba inicia sesión con el usuario que necesita.
+    { name: "acceso", testMatch: /(acceso|rls|gestion)\.spec\.ts/, use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 } } },
+    // Pantallas de la app, ya con sesión (director A). Chromium es el único navegador instalado.
     { name: "movil", dependencies: ["sesion"], testIgnore: sinSesion,
       use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, ...conSesion } },
     { name: "movil-pequeno", dependencies: ["sesion"], testIgnore: sinSesion, grep: /@movil/,

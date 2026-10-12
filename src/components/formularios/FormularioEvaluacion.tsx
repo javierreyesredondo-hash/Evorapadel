@@ -65,7 +65,7 @@ function FormularioEvaluacion() {
     const pendienteId = pendiente && pendiente.jugadorId === jugadorId ? pendiente.id : undefined;
     despachar({ tipo: "registrarEvaluacion", evaluacion: r.valor, pendienteId });
     mostrarAviso("Evaluación guardada");
-    router.push(`/jugadores/${jugadorId}`);
+    router.push(`/demo/jugadores/${jugadorId}`);
   }
 
   const jugador = jugadorPorId(jugadorId);

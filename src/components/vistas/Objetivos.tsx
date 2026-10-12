@@ -15,7 +15,7 @@ export function Objetivos() {
       <Cabecera
         titulo="Objetivos"
         subtitulo={`${activos.length} en curso · ${completados.length} completados`}
-        accion={<EnlaceBoton href="/objetivos/nuevo" className="shrink-0">Nuevo</EnlaceBoton>}
+        accion={<EnlaceBoton href="/demo/objetivos/nuevo" className="shrink-0">Nuevo</EnlaceBoton>}
       />
       {activos.length > 0 ? (
         <Lista etiqueta="Objetivos en curso">

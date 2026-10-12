@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { BannerDemo } from "@/components/Demo";
 import { NOMBRE_ROL, RUTA_ACCESO, RUTA_SALIR, type Membresia } from "@/lib/acceso";
 import { obtenerSesion } from "@/lib/supabase/sesion";
 
@@ -44,7 +43,6 @@ export async function ZonaPrivada({ children }: { children: ReactNode }) {
   return (
     <>
       <BarraEscuela membresia={principal} otras={otras.length} nombre={sesion.nombreVisible ?? sesion.email} />
-      <BannerDemo />
       {children}
     </>
   );

@@ -16,7 +16,7 @@ export function Evaluaciones() {
       <Cabecera
         titulo="Evaluaciones"
         subtitulo={`${pendientes.length} pendientes · puntuaciones de 1 a 5`}
-        accion={<EnlaceBoton href="/evaluaciones/nueva" className="shrink-0">Nueva</EnlaceBoton>}
+        accion={<EnlaceBoton href="/demo/evaluaciones/nueva" className="shrink-0">Nueva</EnlaceBoton>}
       />
 
       {pendientes.length > 0 ? (
