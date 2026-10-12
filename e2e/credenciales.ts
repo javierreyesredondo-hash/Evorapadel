@@ -16,3 +16,19 @@ export function configSupabaseLocal() {
   if (!url || !clave) throw new Error("Falta la configuración del Supabase local.");
   return { url, clave };
 }
+
+/** Cliente de Supabase con la clave pública y la sesión de `usuario` (la misma vía que la app). */
+export async function clienteComo(usuario: UsuarioPrueba) {
+  const { createClient } = await import("@supabase/supabase-js");
+  const { url, clave } = configSupabaseLocal();
+  const cliente = createClient(url, clave, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { email, contrasena } = credenciales(usuario);
+  const { error } = await cliente.auth.signInWithPassword({ email, password: contrasena });
+  if (error) throw new Error(`No se pudo iniciar sesión como ${usuario}: ${error.message}`);
+  return cliente;
+}
+
+/** Sufijo único: las pruebas corren en paralelo sobre la misma base de datos. */
+export function unico(): string {
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+}

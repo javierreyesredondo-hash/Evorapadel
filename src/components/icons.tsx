@@ -59,6 +59,27 @@ export function IconObjetivos(props: IconProps) {
   );
 }
 
+export function IconGrupos(props: IconProps) {
+  return (
+    <Base {...props}>
+      <rect x="3" y="4" width="18" height="16" rx="3" />
+      <path d="M3 12h18" />
+      <path d="M12 4v16" />
+    </Base>
+  );
+}
+
+/** Demostración: tubo de ensayo. */
+export function IconDemo(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M9 3h6" />
+      <path d="M10 3v6.5L5 18a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-8.5V3" />
+      <path d="M7.5 14h9" />
+    </Base>
+  );
+}
+
 export function IconFlecha(props: IconProps) {
   return (
     <Base {...props}>

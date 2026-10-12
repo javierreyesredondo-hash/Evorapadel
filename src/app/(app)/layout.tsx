@@ -1,15 +1,14 @@
 import { Suspense } from "react";
 import { Logo } from "@/components/Logo";
 import { NavegacionInferior, NavegacionLateral } from "@/components/Navegacion";
-import { Aviso } from "@/components/Demo";
+import { ProveedorAvisos } from "@/components/gestion/Avisos";
 import { ZonaPrivada, CargandoSesion } from "@/components/ZonaPrivada";
-import { ProveedorAlmacen } from "@/lib/almacen";
 
 // Zona privada. El Proxy ya redirige a /acceso sin sesión; ZonaPrivada vuelve
 // a comprobarla en el servidor antes de mostrar nada (defensa en profundidad).
 export default function LayoutApp({ children }: LayoutProps<"/">) {
   return (
-    <ProveedorAlmacen>
+    <ProveedorAvisos>
       <div className="md:flex">
         <aside className="hidden md:sticky md:top-0 md:flex md:h-dvh md:w-60 md:shrink-0 md:flex-col md:border-r md:border-noche-500 md:px-4 md:py-6">
           <Logo />
@@ -31,7 +30,6 @@ export default function LayoutApp({ children }: LayoutProps<"/">) {
         </div>
       </div>
       <NavegacionInferior />
-      <Aviso />
-    </ProveedorAlmacen>
+    </ProveedorAvisos>
   );
 }

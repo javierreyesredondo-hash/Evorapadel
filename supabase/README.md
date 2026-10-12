@@ -194,6 +194,49 @@ rutas de Kong (`/auth/v1`, `/rest/v1`). Aplica las dos migraciones y crea, con
 claves se generan en cada arranque y solo sirven en local. `npm run
 supabase:local:parar` lo detiene.
 
+## Jugadores y grupos (Fase 4)
+
+La app usa las tablas `jugadores`, `grupos` y `grupo_jugadores` **con las
+políticas existentes, sin cambios**. No hace falta ninguna migración nueva.
+
+| Operación en la app | Tabla / operación | Política RLS | Director | Entrenador |
+|---|---|---|---|---|
+| Ver jugadores | `jugadores` select | `jugadores_leer` | ✓ | ✓ |
+| Crear jugador | `jugadores` insert | `jugadores_crear` | ✓ | ✓ |
+| Editar jugador | `jugadores` update | `jugadores_editar` | ✓ | ✓ |
+| Archivar / reactivar | `jugadores` update (`activo`) | `jugadores_editar` | ✓ | ✓ |
+| Ver grupos | `grupos` select | `grupos_leer` | ✓ | ✓ |
+| Crear / editar grupo | `grupos` insert / update | `grupos_*_director` | ✓ | ✗ (la app lo indica) |
+| Asignar jugador | `grupo_jugadores` insert | `grupo_jugadores_crear` | ✓ | ✓ |
+| Quitar jugador | `grupo_jugadores` delete | `grupo_jugadores_borrar` | ✓ | ✓ |
+| Elegir entrenador/a | `membresias` + `perfiles` select | `membresias_leer`, `perfiles_leer` | ✓ | ✓ |
+
+Decisiones:
+
+- **La escuela** sale de la membresía del usuario verificado en el servidor
+  (`contextoEscuela()`); los formularios no envían `escuela_id` y, si se
+  añade a mano, se ignora (probado). Toda lectura y escritura filtra además
+  por esa escuela; RLS y las FK compuestas lo imponen en la base de datos.
+- **Archivar, no borrar:** la app no usa `delete` en `jugadores` ni en
+  `grupos` (las políticas de borrado del director siguen existiendo).
+- **Duplicados:** el nombre de grupo es único por escuela (índice existente,
+  error 23505 → mensaje en español). Para jugadores, la app avisa si ya hay
+  otro con el mismo nombre (sin tildes ni mayúsculas) y pide confirmación.
+  Asignar dos veces no duplica (clave primaria `grupo_id, jugador_id`).
+- **Una UPDATE que no afecta a ninguna fila** (otra escuela, sin permiso o
+  inexistente) se trata como «no encontrado» (`.select()` tras la escritura).
+
+Limitaciones conocidas (no requieren cambiar políticas):
+
+- `perfiles.nombre_visible` está vacío en los usuarios creados a mano, así que
+  el selector de entrenador muestra «Entrenador/a sin nombre visible». Se
+  puede rellenar en el SQL Editor o con una pantalla de perfil futura (el
+  propio usuario ya tiene permiso para editar su `nombre_visible`).
+- Con varias escuelas, la app usa la primera por nombre (como la barra «Tu
+  escuela»); falta un selector.
+- Los jugadores pueden ser menores: la app guarda solo las columnas del
+  esquema (sin datos de contacto). Revisar el RGPD antes de cargar datos reales.
+
 ## Secretos
 
 - **Nunca** subir al repositorio claves de Supabase. `.env*` ya está en `.gitignore`.

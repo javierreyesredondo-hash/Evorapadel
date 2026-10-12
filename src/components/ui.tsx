@@ -184,7 +184,7 @@ export function FilaJugador({
   return (
     <li>
       <Link
-        href={`/jugadores/${jugador.id}`}
+        href={`/demo/jugadores/${jugador.id}`}
         className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-noche-600"
       >
         <Avatar nombre={jugador.nombre} />
@@ -211,7 +211,7 @@ export function FilaPendiente({ pendiente }: { pendiente: EvaluacionPendiente })
   return (
     <li>
       <Link
-        href={`/evaluaciones/nueva?pendiente=${pendiente.id}`}
+        href={`/demo/evaluaciones/nueva?pendiente=${pendiente.id}`}
         aria-label={`Evaluar a ${jugador?.nombre ?? "jugador"}: ${pendiente.tipo}, ${textoVencimiento(pendiente.venceEnDias)}`}
         className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-noche-600"
       >
@@ -263,7 +263,7 @@ export function FilaRealizada({
     <li>
       {mostrarJugador ? (
         <Link
-          href={`/jugadores/${evaluacion.jugadorId}`}
+          href={`/demo/jugadores/${evaluacion.jugadorId}`}
           className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-noche-600"
         >
           {contenido}

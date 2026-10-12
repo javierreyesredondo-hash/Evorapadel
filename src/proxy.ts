@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { esRutaPublica, RUTA_ACCESO, RUTA_SALIR } from "@/lib/acceso";
-import { esFichaExistente } from "@/lib/rutas";
+import { decidirRuta } from "@/lib/rutas";
 import { actualizarSesion, conSesion } from "@/lib/supabase/proxy";
 
 // Proxy (antes «middleware») de Next 16. Se ejecuta antes de renderizar:
@@ -10,8 +10,8 @@ import { actualizarSesion, conSesion } from "@/lib/supabase/proxy";
 // 2. Comprobación OPTIMISTA de acceso: sin sesión, toda ruta privada redirige
 //    a /acceso. Es solo el primer filtro: la zona privada vuelve a comprobar la
 //    sesión en el servidor (src/lib/supabase/sesion.ts) antes de mostrar nada.
-// 3. Fichas de jugadores inexistentes → 404 real (con Cache Components el
-//    notFound() de la página llegaba tarde y el código era 200).
+// 3. Fichas con identificador imposible → 404 real (con Cache Components el
+//    notFound() de la página llegaba tarde y el código era 200). Ver decidirRuta.
 
 /** Ruta que no existe en la app: Next la resuelve con not-found.tsx y estado 404. */
 const RUTA_NO_ENCONTRADA = "/_no-encontrado";
@@ -33,8 +33,12 @@ export async function proxy(request: NextRequest) {
     return conSesion(NextResponse.redirect(new URL("/", request.url)), respuesta);
   }
 
-  if (pathname.startsWith("/jugadores/") && !esFichaExistente(pathname)) {
+  const decision = decidirRuta(pathname);
+  if (decision.tipo === "no-encontrado") {
     return conSesion(NextResponse.rewrite(new URL(RUTA_NO_ENCONTRADA, request.url)), respuesta);
+  }
+  if (decision.tipo === "redirigir") {
+    return conSesion(NextResponse.redirect(new URL(decision.destino, request.url)), respuesta);
   }
 
   return respuesta;

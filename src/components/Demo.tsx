@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { useAlmacen } from "@/lib/almacen";
+import { useAvisos } from "@/components/gestion/Avisos";
 
 /** Aviso permanente de modo demostración, con opción de volver a los datos iniciales. */
 export function BannerDemo() {
@@ -9,7 +11,8 @@ export function BannerDemo() {
     <div className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-naranja/40 bg-naranja/10 px-3 py-2 text-xs text-naranja">
       <p>
         <strong className="font-bold">Modo demostración:</strong> todos los jugadores y datos son
-        ficticios. Los cambios se guardan solo en este navegador.
+        ficticios. Los cambios se guardan solo en este navegador y no se mezclan con los datos
+        reales de tu escuela.
       </p>
       <button
         type="button"
@@ -27,18 +30,15 @@ export function BannerDemo() {
   );
 }
 
-/** Confirmación breve tras guardar. */
-export function Aviso() {
+/**
+ * Las confirmaciones de la demo («Evaluación guardada») se muestran con el
+ * mismo aviso que las pantallas reales: una sola región de estado en la página.
+ */
+export function PuenteAvisosDemo() {
   const { aviso } = useAlmacen();
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-30 flex justify-center px-4 md:bottom-6"
-    >
-      {aviso && (
-        <p className="rounded-full bg-blanco px-4 py-2 text-sm font-bold text-noche shadow-lg">{aviso}</p>
-      )}
-    </div>
-  );
+  const { avisar } = useAvisos();
+  useEffect(() => {
+    if (aviso) avisar(aviso);
+  }, [aviso, avisar]);
+  return null;
 }

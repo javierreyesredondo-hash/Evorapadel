@@ -21,7 +21,7 @@ test.describe("Sin sesión", () => {
     await expect(page).toHaveURL(/\/acceso$/);
     await expect(page.getByRole("heading", { name: "Iniciar sesión" })).toBeVisible();
 
-    for (const ruta of ["/jugadores", "/jugadores/j1", "/evaluaciones/nueva?pendiente=e1", "/objetivos"]) {
+    for (const ruta of ["/jugadores", "/grupos", "/demo/jugadores/j1", "/demo/evaluaciones/nueva?pendiente=e1", "/demo/objetivos"]) {
       await page.goto(ruta);
       await expect(page).toHaveURL(new RegExp(`/acceso\\?siguiente=${encodeURIComponent(ruta).replace(/[?.]/g, "\\$&")}$`));
     }
@@ -79,8 +79,9 @@ test.describe("Con sesión: escuela y rol desde la base de datos (RLS)", () => {
     await expect(barraEscuela(page)).toContainText("Escuela Demo A");
     await expect(barraEscuela(page)).toContainText("Director/a");
     await expect(page.getByText("Escuela Demo B")).toHaveCount(0);
-    // Los datos ficticios de la Fase 2 siguen ahí (aún no se migran).
-    await expect(page.getByText(/Modo demostración/)).toBeVisible();
+    // Inicio con datos reales; la demo (ficticia) está aparte, en /demo.
+    await expect(page.getByText(/Datos reales de tu escuela/)).toBeVisible();
+    await expect(page.getByText(/Modo demostración/)).toHaveCount(0);
   });
 
   test("entrenador de A: rol entrenador", async ({ page }) => {
@@ -100,17 +101,18 @@ test.describe("Con sesión: escuela y rol desde la base de datos (RLS)", () => {
     await expect(page.getByRole("heading", { name: "Tu cuenta no tiene escuela" })).toBeVisible();
     await expect(barraEscuela(page)).toHaveCount(0);
     await expect(page.getByText(/Modo demostración/)).toHaveCount(0);
+    await expect(page.getByText(/Datos reales de tu escuela/)).toHaveCount(0);
     await expect(page.getByText("Hola, entrenador")).toHaveCount(0);
   });
 
   test("tras entrar vuelve a la página pedida", async ({ page }) => {
-    await page.goto("/jugadores/j1");
+    await page.goto("/demo/jugadores/j1");
     await expect(page).toHaveURL(/siguiente=/);
     const { email, contrasena } = credenciales("DIRECTOR_A");
     await page.getByLabel("Correo electrónico").fill(email);
     await page.getByLabel("Contraseña").fill(contrasena);
     await page.getByRole("button", { name: "Entrar" }).click();
-    await expect(page).toHaveURL(/\/jugadores\/j1$/);
+    await expect(page).toHaveURL(/\/demo\/jugadores\/j1$/);
     await expect(page.getByRole("heading", { level: 1, name: "Lucía Marván" })).toBeVisible();
   });
 
@@ -128,8 +130,8 @@ test.describe("Con sesión: escuela y rol desde la base de datos (RLS)", () => {
 
     await barraEscuela(page).getByRole("button", { name: "Cerrar sesión" }).click();
     await expect(page).toHaveURL(/\/acceso$/);
-    await page.goto("/objetivos");
-    await expect(page).toHaveURL(/\/acceso\?siguiente=%2Fobjetivos$/);
+    await page.goto("/demo/objetivos");
+    await expect(page).toHaveURL(/\/acceso\?siguiente=%2Fdemo%2Fobjetivos$/);
   });
 
   test("las cookies de sesión son de Supabase y no contienen la contraseña", async ({ page, context }) => {

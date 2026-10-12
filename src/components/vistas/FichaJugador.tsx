@@ -81,8 +81,8 @@ export function FichaJugador({ id }: { id: string }) {
       </dl>
 
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <EnlaceBoton href={`/evaluaciones/nueva?jugador=${id}`}>Evaluar</EnlaceBoton>
-        <EnlaceBoton href={`/objetivos/nuevo?jugador=${id}`} variante="secundario">
+        <EnlaceBoton href={`/demo/evaluaciones/nueva?jugador=${id}`}>Evaluar</EnlaceBoton>
+        <EnlaceBoton href={`/demo/objetivos/nuevo?jugador=${id}`} variante="secundario">
           Nuevo objetivo
         </EnlaceBoton>
       </div>
