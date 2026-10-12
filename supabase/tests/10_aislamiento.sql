@@ -57,6 +57,8 @@ grant execute on all functions in schema prueba to public;
 \set ent_a   '''000000a2-0000-4000-8000-000000000000'''
 \set dir_b   '''000000b1-0000-4000-8000-000000000000'''
 \set sin     '''00000001-0000-4000-8000-000000000000'''
+-- Registrado en Auth ANTES de aplicar las migraciones (tests/05_antes_de_migrar.sql)
+\set previo  '''00000c01-0000-4000-8000-000000000000'''
 \set jug_a1  '''0000a001-0000-4000-8000-000000000000'''
 \set jug_a2  '''0000a002-0000-4000-8000-000000000000'''
 \set jug_b1  '''0000b001-0000-4000-8000-000000000000'''
@@ -144,8 +146,14 @@ select prueba.ok(
 
 select prueba.ok(
   (select count(*) from public.escuelas) + (select count(*) from public.membresias)
-    + (select count(*) from public.jugadores) + (select count(*) from public.perfiles) = 0,
-  'la migración no inserta ningún dato');
+    + (select count(*) from public.jugadores) + (select count(*) from public.grupos) = 0,
+  'las migraciones no crean escuelas, membresías, jugadores ni grupos');
+
+select prueba.ok(
+  exists (select 1 from public.perfiles where id = :previo)
+  and (select count(*) from public.perfiles) = (select count(*) from auth.users)
+  and (select count(*) from public.perfiles where nombre_visible is not null) = 0,
+  'el usuario registrado antes de migrar recibe su perfil (solo el id, sin datos personales)');
 
 
 -- ----------------------------------------------------------------- preparación
@@ -154,7 +162,7 @@ set role supabase_auth_admin;
 insert into auth.users (id) values (:dir_a), (:ent_a), (:dir_b), (:sin);
 reset role;
 
-select prueba.ok((select count(*) from public.perfiles) = 4,
+select prueba.ok((select count(*) from public.perfiles) = 5,
   'el trigger crea un perfil por usuario de Auth (aunque el rol de Auth no tenga EXECUTE)');
 select prueba.ok((select count(*) from public.perfiles where nombre_visible is not null) = 0,
   'los perfiles nacen sin datos personales');
@@ -263,6 +271,13 @@ select prueba.ok((select updated_at > created_at or updated_at = now() from publ
   'updated_at se actualiza automáticamente');
 select prueba.ok(prueba.filas(format('insert into public.grupos (escuela_id, nombre) values (%L, %L)', :esc_a, 'Grupo A2')) = 1,
   'director A: crea un grupo en A');
+select prueba.ok(prueba.filas(format('update public.grupos set entrenador_id = null where id = %L', :gru_a)) = 1
+             and prueba.filas(format('update public.grupos set entrenador_id = %L where id = %L', :ent_a, :gru_a)) = 1,
+  'director A: quita y vuelve a asignar a su entrenador en un grupo (UPDATE)');
+select prueba.error(format('update public.grupos set entrenador_id = %L where id = %L', :dir_b, :gru_a),
+  '23503', 'director A: no puede asignar como entrenador a alguien de la escuela B (UPDATE)');
+select prueba.error(format('update public.grupos set entrenador_id = %L where id = %L', :sin, :gru_a),
+  '23503', 'director A: no puede asignar como entrenador a alguien sin escuela');
 select prueba.error(format('insert into public.grupos (escuela_id, nombre) values (%L, %L)', :esc_a, '  grupo a2 '),
   '23505', 'nombres de grupo únicos por escuela (sin distinguir mayúsculas ni espacios)');
 select prueba.ok(prueba.filas(format('delete from public.jugadores where id = %L', :jug_a2)) = 1,
@@ -286,6 +301,10 @@ select prueba.error(format('insert into public.grupos (escuela_id, nombre) value
   '42501', 'entrenador A: no puede crear grupos (solo director)');
 select prueba.ok(prueba.filas(format('update public.grupos set nombre = %L where id = %L', 'Otro', :gru_a)) = 0,
   'entrenador A: no puede editar grupos');
+select prueba.ok(prueba.filas(format('update public.grupos set entrenador_id = null where id = %L', :gru_a)) = 0,
+  'entrenador A: no puede cambiar quién entrena un grupo (lo decide el director)');
+select prueba.ok((select entrenador_id from public.grupos where id = :gru_a) = :ent_a::uuid,
+  'entrenador A: ve el grupo que tiene asignado');
 select prueba.ok(prueba.filas(format('delete from public.grupos where id = %L', :gru_a)) = 0,
   'entrenador A: no puede borrar grupos');
 select prueba.ok(prueba.filas(format('update public.escuelas set nombre = %L where id = %L', 'Otra', :esc_a)) = 0,
@@ -343,6 +362,60 @@ delete from public.escuelas where id = :esc_b;
 select prueba.ok(not exists (select 1 from public.jugadores where escuela_id = :esc_b)
              and not exists (select 1 from public.grupos where escuela_id = :esc_b),
   'borrar una escuela (solo service_role) borra sus datos');
+reset role;
+
+
+-- ------------------------------------- alta de escuela con director (migración 2)
+set role anon;
+select prueba.error(format('select privado.crear_escuela_con_director(%L, %L)', 'X', 'previo@ejemplo.invalid'),
+  '42501', 'anon no puede usar el alta de escuelas');
+reset role;
+select set_config('request.jwt.claim.sub', :previo, false);
+set role authenticated;
+select prueba.error(format('select privado.crear_escuela_con_director(%L, %L)', 'X', 'previo@ejemplo.invalid'),
+  '42501', 'un usuario autenticado no puede darse de alta como director');
+reset role;
+set role service_role;
+select prueba.error(format('select privado.crear_escuela_con_director(%L, %L)', 'X', 'previo@ejemplo.invalid'),
+  '42501', 'service_role (API) tampoco puede usar el alta de escuelas');
+reset role;
+
+-- Como «postgres» (SQL Editor de Supabase)
+set role postgres;
+select prueba.error(format('select privado.crear_escuela_con_director(%L, %L)', ' x ', 'previo@ejemplo.invalid'),
+  '22023', 'alta: rechaza nombres de escuela demasiado cortos');
+select prueba.error(format('select privado.crear_escuela_con_director(%L, %L)', 'Escuela C', '  '),
+  '22023', 'alta: exige el email del director');
+select prueba.error(format('select privado.crear_escuela_con_director(%L, %L)', 'Escuela C', 'nadie@ejemplo.invalid'),
+  'P0002', 'alta: avisa si no existe ningún usuario con ese email');
+select prueba.ok(not exists (select 1 from public.escuelas where nombre = 'Escuela C'),
+  'alta: si falla, no se crea ninguna escuela');
+select prueba.ok(
+  (select privado.crear_escuela_con_director('  Escuela C  ', '  PREVIO@Ejemplo.INVALID ')) is not null,
+  'alta: crea la escuela (email sin distinguir mayúsculas ni espacios)');
+select prueba.ok(
+  exists (select 1 from public.membresias m join public.escuelas e on e.id = m.escuela_id
+          where e.nombre = 'Escuela C' and m.usuario_id = :previo and m.rol = 'director'),
+  'alta: el usuario registrado antes de migrar queda como director');
+reset role;
+
+set role supabase_auth_admin;
+insert into auth.users (id, email) values
+  ('00000d01-0000-4000-8000-000000000000', 'repetido@ejemplo.invalid'),
+  ('00000d02-0000-4000-8000-000000000000', 'REPETIDO@ejemplo.invalid');
+reset role;
+set role postgres;
+select prueba.error(format('select privado.crear_escuela_con_director(%L, %L)', 'Escuela D', 'repetido@ejemplo.invalid'),
+  'P0003', 'alta: se niega si hay varios usuarios con el mismo email');
+reset role;
+
+-- El nuevo director accede a su escuela y solo a ella
+select set_config('request.jwt.claim.sub', :previo, false);
+set role authenticated;
+select prueba.ok((select array_agg(nombre) from public.escuelas) = array['Escuela C'],
+  'el nuevo director ve su escuela y ninguna otra');
+select prueba.ok(prueba.filas(format('insert into public.jugadores (escuela_id, nombre) select id, %L from public.escuelas', 'Jugador C1')) = 1,
+  'el nuevo director ya puede crear jugadores en su escuela');
 reset role;
 
 \warn 'TODAS LAS PRUEBAS DE AISLAMIENTO HAN PASADO'

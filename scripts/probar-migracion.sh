@@ -45,6 +45,7 @@ psql_como() { # rol, archivos...
 }
 
 psql_como supabase_admin -f "$RAIZ/supabase/tests/00_entorno_local.sql" >/dev/null
+psql_como supabase_admin -f "$RAIZ/supabase/tests/05_antes_de_migrar.sql" >/dev/null
 
 shopt -s nullglob
 MIGS=("$MIGRACIONES"/*.sql)

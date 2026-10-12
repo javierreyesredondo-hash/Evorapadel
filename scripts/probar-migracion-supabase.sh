@@ -33,7 +33,12 @@ echo "Imagen: $IMAGEN — $(docker exec "$NOMBRE" psql -U supabase_admin -d post
 
 docker exec "$NOMBRE" mkdir -p /tmp/migraciones /tmp/pruebas
 docker cp "$MIGRACIONES/." "$NOMBRE:/tmp/migraciones/" >/dev/null
+docker cp "$RAIZ/supabase/tests/05_antes_de_migrar.sql" "$NOMBRE:/tmp/pruebas/" >/dev/null
 docker cp "$RAIZ/supabase/tests/10_aislamiento.sql" "$NOMBRE:/tmp/pruebas/" >/dev/null
+
+# Usuario registrado en Auth antes de aplicar las migraciones.
+docker exec -i "$NOMBRE" psql -U supabase_admin -d postgres -X -q -v ON_ERROR_STOP=1 \
+  -f /tmp/pruebas/05_antes_de_migrar.sql >/dev/null
 
 for m in "$MIGRACIONES"/*.sql; do
   echo "Aplicando como postgres (no superusuario): $(basename "$m")"

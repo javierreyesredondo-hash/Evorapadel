@@ -11,8 +11,10 @@ import { join } from "node:path";
 
 const raiz = new URL("..", import.meta.url).pathname;
 const dirMig = join(raiz, "supabase/migrations");
-const archivo = readdirSync(dirMig).filter((f) => f.endsWith(".sql")).sort().at(-1);
-const original = readFileSync(join(dirMig, archivo), "utf8");
+// Todas las migraciones, en orden. Cada mutación se aplica al archivo que
+// contiene el texto a cambiar; el resto se copia sin tocar.
+const archivos = readdirSync(dirMig).filter((f) => f.endsWith(".sql")).sort();
+const contenidos = new Map(archivos.map((f) => [f, readFileSync(join(dirMig, f), "utf8")]));
 
 /** [nombre, texto original, texto mutado, SQL extra al final (opcional)] */
 const mutaciones = [
@@ -56,20 +58,32 @@ const mutaciones = [
     "create policy grupos_leer on public.grupos\n  for select to authenticated", "create policy grupos_leer on public.grupos\n  for select to public"],
   ["FK sin índice",
     "create index grupo_jugadores_grupo_idx     on public.grupo_jugadores (escuela_id, grupo_id);\n", ""],
+  // Migración 2
+  ["sin relleno de perfiles de usuarios previos",
+    "insert into public.perfiles (id)\nselect u.id from auth.users u\non conflict (id) do nothing;", ""],
+  ["alta de escuelas ejecutable por usuarios autenticados",
+    "revoke all on function privado.crear_escuela_con_director(text, text)\n  from public, anon, authenticated, service_role;",
+    "revoke all on function privado.crear_escuela_con_director(text, text)\n  from public, anon, service_role;\ngrant execute on function privado.crear_escuela_con_director(text, text) to authenticated;\ngrant insert on public.escuelas, public.membresias, public.perfiles to authenticated;\ngrant select on auth.users to authenticated;"],
+  ["alta de escuelas que acepta emails duplicados",
+    "  if cardinality(v_usuarios) > 1 then", "  if false then"],
 ];
 
 let huecos = 0;
 for (const [nombre, de, a, extra = ""] of mutaciones) {
-  if (!original.includes(de)) {
+  const archivo = archivos.find((f) => contenidos.get(f).includes(de));
+  if (!archivo) {
     console.error(`✗ La mutación «${nombre}» ya no encaja con la migración: actualízala.`);
     process.exitCode = 1;
     huecos++;
     continue;
   }
   const dir = mkdtempSync(join(tmpdir(), "mutacion-"));
-  writeFileSync(join(dir, archivo), `${original.replace(de, a)}\n${extra}\n`);
   chmodSync(dir, 0o755);
-  chmodSync(join(dir, archivo), 0o644);
+  for (const f of archivos) {
+    const texto = f === archivo ? `${contenidos.get(f).replace(de, a)}\n${extra}\n` : contenidos.get(f);
+    writeFileSync(join(dir, f), texto);
+    chmodSync(join(dir, f), 0o644);
+  }
   const r = spawnSync("bash", [join(raiz, "scripts/probar-migracion.sh")], {
     env: { ...process.env, MIGRACIONES: dir },
     encoding: "utf8",
