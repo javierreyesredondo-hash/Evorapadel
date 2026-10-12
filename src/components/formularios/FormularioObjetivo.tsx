@@ -84,10 +84,17 @@ function FormularioObjetivo() {
           />
         </Campo>
 
-        <fieldset aria-describedby={errores.area ? "area-error" : undefined}>
-          <legend className="mb-1.5 text-sm font-semibold">Área</legend>
+        <fieldset
+          role="radiogroup"
+          aria-labelledby="area-nombre"
+          aria-invalid={errores.area ? true : undefined}
+          aria-describedby={errores.area ? "area-error" : undefined}
+        >
+          <legend id="area-nombre" className="mb-1.5 text-sm font-semibold">
+            Área
+          </legend>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {AREAS.map((a, i) => (
+            {AREAS.map((a) => (
               <label key={a} className="relative">
                 <input
                   type="radio"
@@ -95,7 +102,6 @@ function FormularioObjetivo() {
                   value={a}
                   checked={area === a}
                   onChange={() => setArea(a)}
-                  aria-invalid={i === 0 && !!errores.area ? true : undefined}
                   className="peer absolute inset-0 size-full cursor-pointer opacity-0"
                 />
                 <span className="grid h-11 place-items-center rounded-xl bg-noche-700 text-sm font-semibold text-tenue ring-1 ring-noche-500 transition-colors peer-checked:bg-electrico peer-checked:text-noche peer-checked:ring-electrico peer-focus-visible:ring-2 peer-focus-visible:ring-blanco">

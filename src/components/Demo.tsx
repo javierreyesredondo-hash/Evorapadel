@@ -6,14 +6,14 @@ import { useAlmacen } from "@/lib/almacen";
 export function BannerDemo() {
   const { despachar, mostrarAviso } = useAlmacen();
   return (
-    <div className="mb-6 flex items-start justify-between gap-3 rounded-xl border border-naranja/40 bg-naranja/10 px-3 py-2 text-xs text-naranja">
+    <div className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-naranja/40 bg-naranja/10 px-3 py-2 text-xs text-naranja">
       <p>
         <strong className="font-bold">Modo demostración:</strong> todos los jugadores y datos son
         ficticios. Los cambios se guardan solo en este navegador.
       </p>
       <button
         type="button"
-        className="shrink-0 font-bold underline underline-offset-2"
+        className="-my-3 -mr-2 inline-flex min-h-11 shrink-0 items-center px-2 font-bold underline underline-offset-2"
         onClick={() => {
           if (window.confirm("¿Borrar tus cambios y volver a los datos ficticios iniciales?")) {
             despachar({ tipo: "restablecer" });

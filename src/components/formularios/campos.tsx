@@ -37,9 +37,16 @@ export function MensajeError({ id, error }: { id: string; error?: string }) {
   );
 }
 
-/** Lleva el foco al primer campo con error (en orden del formulario). */
+/**
+ * Lleva el foco al primer campo con error (en orden del formulario). Si el
+ * marcado es un grupo (radiogroup), enfoca su primera opción.
+ */
 export function enfocarPrimerError(form: HTMLFormElement | null) {
-  const campo = form?.querySelector<HTMLElement>("[aria-invalid=true]");
+  const marcado = form?.querySelector<HTMLElement>("[aria-invalid=true]");
+  if (!marcado) return;
+  const campo = marcado.matches("input, select, textarea, button")
+    ? marcado
+    : marcado.querySelector<HTMLElement>("input, select, textarea, button");
   campo?.focus();
   campo?.scrollIntoView({ block: "center", behavior: "smooth" });
 }

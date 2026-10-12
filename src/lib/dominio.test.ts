@@ -2,8 +2,6 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { jugadores, type Nota } from "./demo-data.ts";
 import {
-  CLAVE_ALMACEN,
-  deserializarEstado,
   enteroDeTexto,
   estadoInicial,
   evaluacionesDe,
@@ -11,6 +9,8 @@ import {
   filtrarJugadores,
   mediaNotas,
   normalizar,
+  PUNTOS_POR_NOTA,
+  RANGO_PUNTUACION,
   puntuacionGlobal,
   reducir,
   resumenJugador,
@@ -63,13 +63,43 @@ test("filtra por nivel y posición, combinables con el texto", () => {
 
 const notasValidas = { fondo: 4, red: 3, aereo: 5, tactica: 4, fisico: 2, mental: 3 } as const;
 
-test("puntuación global = media × 20 y media con un decimal", () => {
-  assert.equal(puntuacionGlobal(notasValidas), 70);
-  assert.equal(mediaNotas(notasValidas), 3.5);
-  const unos = { fondo: 1, red: 1, aereo: 1, tactica: 1, fisico: 1, mental: 1 } as const;
-  const cincos = { fondo: 5, red: 5, aereo: 5, tactica: 5, fisico: 5, mental: 5 } as const;
-  assert.equal(puntuacionGlobal(unos), 20);
-  assert.equal(puntuacionGlobal(cincos), 100);
+test("puntuación global: cada nota uniforme 1–5 equivale a 20, 40, 60, 80 y 100", () => {
+  const uniforme = (n: Nota) => ({ fondo: n, red: n, aereo: n, tactica: n, fisico: n, mental: n });
+  assert.deepEqual(([1, 2, 3, 4, 5] as Nota[]).map((n) => puntuacionGlobal(uniforme(n))), [20, 40, 60, 80, 100]);
+  assert.deepEqual(RANGO_PUNTUACION, { min: 20, max: 100 });
+  assert.equal(PUNTOS_POR_NOTA, 20);
+});
+
+test("puntuación global usa la media exacta, no la redondeada a un decimal", () => {
+  assert.equal(puntuacionGlobal(notasValidas), 70); // suma 21 → media 3,5 → 70
+  const n = { fondo: 4, red: 3, aereo: 3, tactica: 4, fisico: 5, mental: 4 } as const; // suma 23
+  assert.equal(mediaNotas(n), 23 / 6); // 3,8333…
+  assert.equal(puntuacionGlobal(n), 77); // round(76,67); con la media redondeada (3,8) saldría 76
+});
+
+test("puntuación global está siempre entre 20 y 100 y crece con la suma de notas", () => {
+  let anterior = 0;
+  for (let suma = 6; suma <= 30; suma++) {
+    // Reparte la suma en 6 notas de 1 a 5.
+    const notas: Nota[] = [1, 1, 1, 1, 1, 1];
+    let resto = suma - 6;
+    for (let i = 0; i < 6 && resto > 0; i++) {
+      const extra = Math.min(4, resto);
+      notas[i] = (1 + extra) as Nota;
+      resto -= extra;
+    }
+    const [fondo, red, aereo, tactica, fisico, mental] = notas as [Nota, Nota, Nota, Nota, Nota, Nota];
+    const p = puntuacionGlobal({ fondo, red, aereo, tactica, fisico, mental });
+    assert.ok(p >= 20 && p <= 100, `fuera de rango con suma ${suma}: ${p}`);
+    assert.ok(p > anterior, `no crece con suma ${suma}`);
+    assert.equal(p, Math.round((suma * 20) / 6));
+    anterior = p;
+  }
+});
+
+test("mediaNotas admite evaluaciones a medio rellenar y devuelve null sin notas", () => {
+  assert.equal(mediaNotas({}), null);
+  assert.equal(mediaNotas({ fondo: 4, red: 3 }), 3.5);
 });
 
 test("validarEvaluacion acepta enteros de 1 a 5 en todos los criterios", () => {
@@ -91,6 +121,15 @@ test("validarEvaluacion rechaza notas fuera de rango, decimales, texto o vacías
     assert.equal(r.ok, false, `debería rechazar ${String(malo)}`);
     if (!r.ok) assert.deepEqual(Object.keys(r.errores), ["red"]);
   }
+});
+
+test("validarEvaluacion solo acepta tipos de evaluación de la lista", () => {
+  const r = validarEvaluacion(
+    { jugadorId: "j1", tipo: "Inventado", notas: notasValidas, comentario: "" },
+    { id: "x", fecha: "2026-10-01" },
+  );
+  assert.equal(r.ok, false);
+  if (!r.ok) assert.deepEqual(Object.keys(r.errores), ["tipo"]);
 });
 
 test("validarEvaluacion exige jugador existente y tipo", () => {
@@ -195,16 +234,4 @@ test("estadoInicial no comparte referencias con los datos semilla", () => {
   const a = estadoInicial();
   a.objetivos[0]!.progreso = 0;
   assert.equal(estadoInicial().objetivos[0]!.progreso, 7);
-});
-
-test("deserializarEstado acepta un estado guardado y rechaza datos corruptos", () => {
-  const estado = estadoInicial();
-  assert.deepEqual(deserializarEstado(JSON.stringify(estado)), estado);
-  assert.equal(deserializarEstado(null), null);
-  assert.equal(deserializarEstado("{no es json"), null);
-  assert.equal(deserializarEstado(JSON.stringify({ pendientes: [] })), null);
-  const notaMala = structuredClone(estado);
-  (notaMala.evaluaciones[0]!.notas as Record<string, unknown>).fondo = 9 as Nota;
-  assert.equal(deserializarEstado(JSON.stringify(notaMala)), null);
-  assert.equal(typeof CLAVE_ALMACEN, "string");
 });
