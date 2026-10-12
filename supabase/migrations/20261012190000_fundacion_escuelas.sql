@@ -19,6 +19,8 @@
 --
 -- Requisitos: PostgreSQL 15+ (Supabase). Usa gen_random_uuid() (nativo) y
 -- ON DELETE SET NULL (columna), disponible desde PostgreSQL 15.
+-- Verificada aplicándola como el rol «postgres» (no superusuario, igual que la
+-- CLI de Supabase) sobre la imagen oficial supabase/postgres:15.19.0.004.
 -- Revisión y ejecución: ver supabase/README.md. NO ejecutar sin revisar.
 -- =============================================================================
 
@@ -127,12 +129,14 @@ create table public.grupo_jugadores (
 );
 comment on table public.grupo_jugadores is 'Asignación de jugadores a grupos dentro de una misma escuela.';
 
--- Índices para las FK y los filtros de las políticas.
-create index membresias_usuario_idx       on public.membresias (usuario_id);
-create index jugadores_escuela_idx        on public.jugadores (escuela_id);
-create index jugadores_creado_por_idx     on public.jugadores (creado_por);
+-- Índices: toda FK tiene un índice que la cubre (lo comprueban las pruebas).
+-- escuela_id de jugadores y grupos ya está cubierto por unique (escuela_id, id),
+-- y membresias(escuela_id) por unique (escuela_id, usuario_id).
+create index membresias_usuario_idx        on public.membresias (usuario_id);
+create index jugadores_creado_por_idx      on public.jugadores (creado_por);
 create index grupos_escuela_entrenador_idx on public.grupos (escuela_id, entrenador_id);
-create index grupo_jugadores_jugador_idx  on public.grupo_jugadores (escuela_id, jugador_id);
+create index grupo_jugadores_grupo_idx     on public.grupo_jugadores (escuela_id, grupo_id);
+create index grupo_jugadores_jugador_idx   on public.grupo_jugadores (escuela_id, jugador_id);
 
 
 -- -----------------------------------------------------------------------------

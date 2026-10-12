@@ -100,6 +100,49 @@ select prueba.ok(
   'no hay funciones SECURITY DEFINER en el esquema expuesto public');
 
 select prueba.ok(
+  not exists (
+    -- Cada FK de public debe tener un índice cuyas primeras columnas sean las de la FK.
+    select 1 from pg_constraint c
+    where c.contype = 'f' and c.connamespace = 'public'::regnamespace
+      and not exists (
+        select 1 from pg_index i
+        where i.indrelid = c.conrelid
+          and (i.indkey::int2[])[0:cardinality(c.conkey) - 1] @> c.conkey
+          and (i.indkey::int2[])[0:cardinality(c.conkey) - 1] <@ c.conkey)),
+  'todas las claves foráneas tienen un índice que las cubre');
+
+select prueba.ok(
+  not exists (select 1 from pg_policies where schemaname = 'public' and roles <> '{authenticated}'),
+  'todas las políticas son solo para authenticated (ninguna para anon ni public)');
+
+select prueba.ok(
+  (select count(*) from pg_policies where schemaname = 'public') = 16,
+  'existen exactamente las 16 políticas revisadas');
+
+select prueba.ok(
+  not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+              where n.nspname = 'privado'
+                and (has_function_privilege('anon', p.oid, 'execute')
+                     or has_function_privilege('public', p.oid, 'execute'))),
+  'anon y public no pueden ejecutar ninguna función del esquema privado');
+
+select prueba.ok(
+  not has_schema_privilege('anon', 'privado', 'usage'),
+  'anon no tiene acceso al esquema privado');
+
+select prueba.ok(
+  exists (select 1 from pg_trigger where tgrelid = 'auth.users'::regclass and tgname = 'crear_perfil_al_registrarse'),
+  'existe el trigger de creación de perfiles sobre auth.users');
+
+select prueba.ok(
+  (select confdeltype = 'n'
+          and confdelsetcols = array[(select attnum from pg_attribute
+                                      where attrelid = 'public.grupos'::regclass and attname = 'entrenador_id')]::int2[]
+   from pg_constraint
+   where conrelid = 'public.grupos'::regclass and contype = 'f' and confrelid = 'public.membresias'::regclass),
+  'la FK grupos→membresías usa ON DELETE SET NULL (entrenador_id) solo sobre esa columna');
+
+select prueba.ok(
   (select count(*) from public.escuelas) + (select count(*) from public.membresias)
     + (select count(*) from public.jugadores) + (select count(*) from public.perfiles) = 0,
   'la migración no inserta ningún dato');
@@ -140,6 +183,8 @@ set role anon;
 select prueba.error('select * from public.jugadores', '42501', 'anon no puede leer jugadores');
 select prueba.error('select * from public.escuelas', '42501', 'anon no puede leer escuelas');
 select prueba.error('select privado.es_miembro(gen_random_uuid())', '42501', 'anon no puede usar las funciones privadas');
+select prueba.error(format('insert into public.jugadores (escuela_id, nombre) values (%L, %L)', :esc_a, 'Anónimo'), '42501',
+  'anon no puede crear jugadores');
 reset role;
 
 
@@ -182,6 +227,12 @@ select prueba.ok(prueba.filas(format('update public.escuelas set nombre = %L whe
   'director A: no puede renombrar la escuela B');
 select prueba.error(format('insert into public.grupos (escuela_id, nombre) values (%L, %L)', :esc_b, 'Intruso'),
   '42501', 'director A: no puede crear grupos en B');
+select prueba.ok(prueba.filas(format('update public.grupos set nombre = %L where id = %L', 'Hackeado', :gru_b)) = 0,
+  'director A: no puede editar grupos de B');
+select prueba.ok(prueba.filas(format('delete from public.grupos where id = %L', :gru_b)) = 0,
+  'director A: no puede borrar grupos de B');
+select prueba.ok(prueba.filas(format('delete from public.grupo_jugadores where escuela_id = %L', :esc_b)) = 0,
+  'director A: no puede quitar asignaciones de B');
 
 -- Mezclar escuelas mediante relaciones
 select prueba.error(format('insert into public.grupo_jugadores (escuela_id, grupo_id, jugador_id) values (%L, %L, %L)', :esc_a, :gru_a, :jug_b1),
@@ -208,6 +259,8 @@ select prueba.ok((select creado_por from public.jugadores where nombre = 'Jugado
   'creado_por se rellena solo con el usuario actual');
 select prueba.ok(prueba.filas(format('update public.escuelas set nombre = %L where id = %L', 'Escuela A renombrada', :esc_a)) = 1,
   'director A: renombra su escuela');
+select prueba.ok((select updated_at > created_at or updated_at = now() from public.escuelas where id = :esc_a),
+  'updated_at se actualiza automáticamente');
 select prueba.ok(prueba.filas(format('insert into public.grupos (escuela_id, nombre) values (%L, %L)', :esc_a, 'Grupo A2')) = 1,
   'director A: crea un grupo en A');
 select prueba.error(format('insert into public.grupos (escuela_id, nombre) values (%L, %L)', :esc_a, '  grupo a2 '),
@@ -222,6 +275,7 @@ select set_config('request.jwt.claim.sub', :ent_a, false);
 set role authenticated;
 select prueba.ok((select count(*) from public.jugadores) = 2, 'entrenador A: ve los jugadores de A');
 select prueba.ok((select count(*) from public.jugadores where escuela_id = :esc_b) = 0, 'entrenador A: no ve jugadores de B');
+select prueba.ok((select count(*) from public.membresias) = 2, 'entrenador A: ve las membresías de A y ninguna de B');
 select prueba.ok(prueba.filas(format('insert into public.jugadores (escuela_id, nombre) values (%L, %L)', :esc_a, 'Jugador A4')) = 1,
   'entrenador A: crea jugadores en A');
 select prueba.ok(prueba.filas(format('update public.jugadores set foco = %L where id = %L', 'Volea', :jug_a1)) = 1,
@@ -232,6 +286,8 @@ select prueba.error(format('insert into public.grupos (escuela_id, nombre) value
   '42501', 'entrenador A: no puede crear grupos (solo director)');
 select prueba.ok(prueba.filas(format('update public.grupos set nombre = %L where id = %L', 'Otro', :gru_a)) = 0,
   'entrenador A: no puede editar grupos');
+select prueba.ok(prueba.filas(format('delete from public.grupos where id = %L', :gru_a)) = 0,
+  'entrenador A: no puede borrar grupos');
 select prueba.ok(prueba.filas(format('update public.escuelas set nombre = %L where id = %L', 'Otra', :esc_a)) = 0,
   'entrenador A: no puede renombrar la escuela');
 select prueba.ok(prueba.filas(format(
@@ -259,6 +315,8 @@ reset role;
 
 -- --------------------------------------------------------- borrados en cascada
 set role service_role;
+select prueba.error(format('update public.jugadores set escuela_id = %L where escuela_id = %L', :esc_b, :esc_a),
+  '42501', 'ni siquiera service_role puede mover registros de escuela (trigger)');
 delete from public.membresias where usuario_id = :ent_a;
 select prueba.ok((select entrenador_id from public.grupos where id = :gru_a) is null,
   'al quitar la membresía del entrenador, el grupo se conserva sin entrenador');
@@ -277,6 +335,10 @@ select prueba.ok(not exists (select 1 from public.perfiles where id = :dir_b)
   'borrar un usuario de Auth borra su perfil y sus membresías');
 
 set role service_role;
+-- Escuela con un grupo cuyo entrenador sigue asignado: el borrado en cascada
+-- (membresías → SET NULL en grupos, y grupos → borrado) no debe fallar.
+insert into public.membresias (escuela_id, usuario_id, rol) values (:esc_b, :sin, 'entrenador');
+update public.grupos set entrenador_id = :sin where id = :gru_b;
 delete from public.escuelas where id = :esc_b;
 select prueba.ok(not exists (select 1 from public.jugadores where escuela_id = :esc_b)
              and not exists (select 1 from public.grupos where escuela_id = :esc_b),

@@ -39,6 +39,8 @@ npm run lint
 npm run typecheck
 npm test           # lógica (node --test)
 npm run test:db    # migración SQL en un PostgreSQL local desechable
+npm run test:db:supabase    # misma prueba con la imagen oficial de Supabase (Docker)
+npm run test:db:mutaciones  # comprueba que las pruebas detectan fallos de seguridad
 npm run test:e2e   # compila y prueba los flujos en Chromium (móvil y escritorio)
 npm run build
 ```

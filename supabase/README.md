@@ -8,9 +8,11 @@
 | Ruta | Qué es |
 |---|---|
 | `migrations/20261012190000_fundacion_escuelas.sql` | Migración 1: escuelas, perfiles, membresías, jugadores, grupos, RLS y permisos. |
-| `tests/00_entorno_local.sql` | Simulación mínima de Supabase para pruebas **locales**. **Nunca** ejecutarlo en Supabase. |
-| `tests/10_aislamiento.sql` | 65 comprobaciones de aislamiento entre escuelas y de permisos. |
-| `../scripts/probar-migracion.sh` | Levanta un PostgreSQL desechable, aplica la migración y ejecuta las pruebas (`npm run test:db`). |
+| `tests/00_entorno_local.sql` | Simulación de Supabase para pruebas **locales** (roles, `auth`, `postgres` no superusuario). **Nunca** ejecutarlo en Supabase. |
+| `tests/10_aislamiento.sql` | 80 comprobaciones de aislamiento entre escuelas, permisos y estructura. |
+| `../scripts/probar-migracion.sh` | PostgreSQL local desechable: aplica la migración como `postgres` y ejecuta las pruebas (`npm run test:db`). |
+| `../scripts/probar-migracion-supabase.sh` | Lo mismo sobre la **imagen oficial** `supabase/postgres` en Docker (`npm run test:db:supabase`). |
+| `../scripts/probar-mutaciones.mjs` | Introduce 15 fallos de seguridad, uno a uno, y exige que las pruebas los detecten (`npm run test:db:mutaciones`). |
 
 ## Modelo
 
@@ -56,16 +58,33 @@ filtra por escuela en todo):
 ## Cómo revisarla
 
 1. Leer la migración de arriba abajo; cada bloque está comentado.
-2. Ejecutar las pruebas locales (no tocan Supabase):
+2. Ejecutar las pruebas (ninguna toca un proyecto de Supabase):
 
    ```bash
-   npm run test:db
+   npm run test:db              # PostgreSQL 15+ local (initdb, pg_ctl, psql)
+   npm run test:db:supabase     # imagen oficial supabase/postgres (Docker)
+   IMAGEN=supabase/postgres:17.11.0.004 npm run test:db:supabase
+   npm run test:db:mutaciones   # ¿detectan las pruebas fallos reales?
    ```
 
-   Requiere PostgreSQL 15+ instalado (`initdb`, `pg_ctl`, `psql`). Si `pg_config`
-   no está en el `PATH`: `PG_BIN=/ruta/a/postgresql/bin npm run test:db`.
+   Si `pg_config` no está en el `PATH`: `PG_BIN=/ruta/a/postgresql/bin npm run test:db`.
 3. Comprobar que las pruebas cubren lo que te preocupa; si falta algo, añadirlo
-   en `tests/10_aislamiento.sql` antes de aplicar nada.
+   en `tests/10_aislamiento.sql` (y una mutación que lo rompa en
+   `scripts/probar-mutaciones.mjs`) antes de aplicar nada.
+
+### Verificación realizada (12 oct 2026)
+
+| Entorno | Resultado |
+|---|---|
+| `supabase/postgres:15.19.0.004` (Docker), aplicada como `postgres` | 80/80 |
+| `supabase/postgres:17.11.0.004` (Docker), aplicada como `postgres` | 80/80 |
+| PostgreSQL 16 local con simulación de Supabase | 80/80 |
+| Mutaciones de seguridad | 15/15 detectadas |
+| Linter oficial de Supabase ([splinter](https://github.com/supabase/splinter), el del *Security Advisor*) sobre 15.19 | Sin avisos de seguridad; solo `unused_index` (base vacía) |
+
+No verificado: un proyecto **alojado** en supabase.com (por decisión, no se ha
+ejecutado nada en Supabase). Por eso conviene `supabase db push --dry-run` y un
+proyecto de pruebas antes del definitivo.
 
 ## Cómo ejecutarla más adelante (cuando se decida)
 
