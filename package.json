@@ -9,15 +9,20 @@
     "lint": "eslint",
     "test": "node --test 'src/**/*.test.ts'",
     "typecheck": "next typegen && tsc --noEmit",
-    "test:e2e": "next build && playwright test",
+    "test:e2e": "node scripts/e2e.mjs",
     "test:db": "bash scripts/probar-migracion.sh",
     "test:db:supabase": "bash scripts/probar-migracion-supabase.sh",
-    "test:db:mutaciones": "node scripts/probar-mutaciones.mjs"
+    "test:db:mutaciones": "node scripts/probar-mutaciones.mjs",
+    "supabase:local": "node scripts/supabase-local.mjs arrancar",
+    "supabase:local:parar": "node scripts/supabase-local.mjs parar"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.117.3",
     "next": "16.4.0",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
