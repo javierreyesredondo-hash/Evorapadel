@@ -21,7 +21,11 @@ La media se muestra con un decimal; ver `src/lib/dominio.ts`.
 existen (con Cache Components, `notFound()` en la página llegaba tarde y el
 código era 200).
 
-Todavía no hay base de datos, autenticación ni pagos. Los cambios se guardan
+Todavía no hay base de datos, autenticación ni pagos.
+
+**Base de datos (Fase 3, en preparación):** `supabase/` contiene la primera
+migración (escuelas, perfiles, membresías, jugadores y grupos con RLS) lista
+para revisar. **No está aplicada** y la app aún no la usa. Ver `supabase/README.md`. Los cambios se guardan
 solo en el `localStorage` del navegador (`src/lib/almacen.tsx`) y se pueden
 deshacer con «Restablecer». Lo guardado se valida por completo al cargar; si
 algo no es válido, se descarta y se vuelve a los datos iniciales.
@@ -34,6 +38,9 @@ npm run dev        # http://localhost:3000
 npm run lint
 npm run typecheck
 npm test           # lógica (node --test)
+npm run test:db    # migración SQL en un PostgreSQL local desechable
+npm run test:db:supabase    # misma prueba con la imagen oficial de Supabase (Docker)
+npm run test:db:mutaciones  # comprueba que las pruebas detectan fallos de seguridad
 npm run test:e2e   # compila y prueba los flujos en Chromium (móvil y escritorio)
 npm run build
 ```

@@ -9,7 +9,10 @@
     "lint": "eslint",
     "test": "node --test 'src/**/*.test.ts'",
     "typecheck": "next typegen && tsc --noEmit",
-    "test:e2e": "next build && playwright test"
+    "test:e2e": "next build && playwright test",
+    "test:db": "bash scripts/probar-migracion.sh",
+    "test:db:supabase": "bash scripts/probar-migracion-supabase.sh",
+    "test:db:mutaciones": "node scripts/probar-mutaciones.mjs"
   },
   "dependencies": {
     "next": "16.4.0",
