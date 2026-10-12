@@ -22,3 +22,22 @@ export function iniciales(nombre: string): string {
     .map((p) => p[0]!.toUpperCase())
     .join("");
 }
+
+const formatoFecha = new Intl.DateTimeFormat("es-ES", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+/** "2026-09-18" → "18 sept 2026". En UTC para que servidor y navegador coincidan. */
+export function textoFecha(iso: string): string {
+  return formatoFecha.format(new Date(`${iso}T00:00:00Z`));
+}
+
+/** Fecha local de hoy como AAAA-MM-DD. */
+export function hoyIso(ahora = new Date()): string {
+  const m = String(ahora.getMonth() + 1).padStart(2, "0");
+  const d = String(ahora.getDate()).padStart(2, "0");
+  return `${ahora.getFullYear()}-${m}-${d}`;
+}
