@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+/* ÉVORA PADEL — paleta de marca.
+   noche: fondo y estructura · eléctrico: acción y progreso
+   naranja: pendiente / requiere atención · blanco: texto */
+@theme inline {
+  --color-noche: #101b2c;
+  --color-noche-700: #16243a;
+  --color-noche-600: #1d2e48;
+  --color-noche-500: #2a3d5c;
+  --color-electrico: #c7ff32;
+  --color-naranja: #ff824c;
+  --color-blanco: #ffffff;
+  --color-tenue: #a9b4c6;
+
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-barlow);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-noche);
+  color: var(--color-blanco);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-electrico);
+  outline-offset: 2px;
+}
