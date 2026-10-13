@@ -14,7 +14,8 @@
     "test:db:supabase": "bash scripts/probar-migracion-supabase.sh",
     "test:db:mutaciones": "node scripts/probar-mutaciones.mjs",
     "supabase:local": "node scripts/supabase-local.mjs arrancar",
-    "supabase:local:parar": "node scripts/supabase-local.mjs parar"
+    "supabase:local:parar": "node scripts/supabase-local.mjs parar",
+    "marca": "node scripts/generar-marca.mjs && node scripts/generar-marca-png.mjs"
   },
   "dependencies": {
     "@fontsource/barlow": "5.3.0",
