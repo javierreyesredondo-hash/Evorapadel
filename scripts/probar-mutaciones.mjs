@@ -66,6 +66,43 @@ const mutaciones = [
     "revoke all on function privado.crear_escuela_con_director(text, text)\n  from public, anon, service_role;\ngrant execute on function privado.crear_escuela_con_director(text, text) to authenticated;\ngrant insert on public.escuelas, public.membresias, public.perfiles to authenticated;\ngrant select on auth.users to authenticated;"],
   ["alta de escuelas que acepta emails duplicados",
     "  if cardinality(v_usuarios) > 1 then", "  if false then"],
+  // Migración 3 (evaluaciones)
+  ["lectura de evaluaciones abierta",
+    "create policy evaluaciones_leer on public.evaluaciones\n  for select to authenticated\n  using ((select privado.es_miembro(escuela_id)));",
+    "create policy evaluaciones_leer on public.evaluaciones\n  for select to authenticated\n  using (true);"],
+  ["lectura de puntuaciones abierta",
+    "create policy evaluacion_puntuaciones_leer on public.evaluacion_puntuaciones\n  for select to authenticated\n  using ((select privado.es_miembro(escuela_id)));",
+    "create policy evaluacion_puntuaciones_leer on public.evaluacion_puntuaciones\n  for select to authenticated\n  using (true);"],
+  ["un entrenador edita evaluaciones ajenas",
+    "        privado.tiene_rol(e.escuela_id, array['director']::public.rol_escuela[])\n        or (e.entrenador_id",
+    "        privado.tiene_rol(e.escuela_id, array['director', 'entrenador']::public.rol_escuela[])\n        or (e.entrenador_id"],
+  ["política de edición sin comprobar el autor",
+    "create policy evaluaciones_editar on public.evaluaciones\n  for update to authenticated\n  using (\n    (select privado.tiene_rol(escuela_id, array['director']::public.rol_escuela[]))",
+    "create policy evaluaciones_editar on public.evaluaciones\n  for update to authenticated\n  using (\n    (select privado.tiene_rol(escuela_id, array['director', 'entrenador']::public.rol_escuela[]))"],
+  ["FK simple (sin escuela) entre evaluación y jugador",
+    "foreign key (escuela_id, jugador_id) references public.jugadores (escuela_id, id) on delete cascade,\n  foreign key (escuela_id, grupo_id)",
+    "foreign key (jugador_id) references public.jugadores (id) on delete cascade,\n  foreign key (escuela_id, grupo_id)",
+    "create index mutacion_idx on public.evaluaciones (jugador_id);"],
+  ["sin validar que el jugador está en el grupo",
+    "create trigger validar_grupo before insert or update on public.evaluaciones\n  for each row execute function privado.validar_grupo_evaluacion();", ""],
+  ["validación de grupo como SECURITY DEFINER (revela asignaciones de otras escuelas)",
+    "language plpgsql security invoker set search_path = ''\nas $$\nbegin\n  if new.grupo_id is not null",
+    "language plpgsql security definer set search_path = ''\nas $$\nbegin\n  if new.grupo_id is not null"],
+  ["puntuaciones sin límite 1–5",
+    "puntuacion      smallint not null check (puntuacion between 1 and 5),", "puntuacion      smallint not null,"],
+  ["guardado de evaluaciones como SECURITY DEFINER",
+    "  p_objetivos      jsonb\n)\nreturns uuid\nlanguage plpgsql\nsecurity invoker",
+    "  p_objetivos      jsonb\n)\nreturns uuid\nlanguage plpgsql\nsecurity definer"],
+  ["autor de la evaluación falsificable",
+    "grant insert (escuela_id, jugador_id, grupo_id, tipo, fecha, titulo, fortalezas, mejoras, observaciones, clave_envio)",
+    "grant insert (escuela_id, jugador_id, grupo_id, entrenador_id, tipo, fecha, titulo, fortalezas, mejoras, observaciones, clave_envio)"],
+  ["sin protección frente a reenvíos (duplicados)",
+    "    on conflict (escuela_id, clave_envio) do nothing\n", ""],
+  ["acepta competencias desactivadas",
+    "        and (c.activa or c.id = any (v_previas))", "        and true"],
+  ["evaluaciones borrables por cualquier miembro",
+    "grant select                    on public.evaluaciones to authenticated;",
+    "grant select, delete            on public.evaluaciones to authenticated;\ncreate policy evaluaciones_borrar on public.evaluaciones for delete to authenticated using ((select privado.es_miembro(escuela_id)));"],
 ];
 
 let huecos = 0;
@@ -80,7 +117,7 @@ for (const [nombre, de, a, extra = ""] of mutaciones) {
   const dir = mkdtempSync(join(tmpdir(), "mutacion-"));
   chmodSync(dir, 0o755);
   for (const f of archivos) {
-    const texto = f === archivo ? `${contenidos.get(f).replace(de, a)}\n${extra}\n` : contenidos.get(f);
+    const texto = f === archivo ? `${contenidos.get(f).replace(de, () => a)}\n${extra}\n` : contenidos.get(f);
     writeFileSync(join(dir, f), texto);
     chmodSync(join(dir, f), 0o644);
   }

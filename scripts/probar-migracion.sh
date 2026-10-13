@@ -55,5 +55,7 @@ for m in "${MIGS[@]}"; do
   psql_como postgres -f "$m" >/dev/null
 done
 
-psql_como supabase_admin -f "$RAIZ/supabase/tests/10_aislamiento.sql" 2>&1 >/dev/null \
-  | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
+for prueba in 10_aislamiento 20_evaluaciones; do
+  psql_como supabase_admin -f "$RAIZ/supabase/tests/$prueba.sql" 2>&1 >/dev/null \
+    | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
+done
