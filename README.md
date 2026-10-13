@@ -20,6 +20,14 @@ Supabase, protegidos con RLS. No hay apartado de demostración ni datos ficticio
 - **Jugadores y grupos:** alta, edición, archivado, grupos y asignaciones.
 - **Metodología:** competencias de la escuela (la dirección las define o carga
   la metodología base ÉVORA y la adapta). Escala fija de 1 a 5.
+- **Importar metodología desde PDF** (dirección; requiere la migración 4, sin
+  aplicar en producción): el PDF se analiza en el servidor de la app (pdf.js,
+  sin servicios externos ni OCR, sin guardar el archivo), la dirección revisa la
+  propuesta por categorías (fases, principios, escala y niveles, áreas,
+  competencias e indicadores, fichas y campos, objetivos, identidad, ejercicios,
+  éxito y transferencia, sesión, «no interpretado»), la guarda como borrador y
+  la activa en un paso aparte. Las evaluaciones guardan la versión usada; una
+  versión nueva no cambia las anteriores.
 - **Evaluaciones:** rápidas (en el entrenamiento, algunas competencias) o
   completas (todas). Notas 1–5, fortalezas, áreas de mejora, observaciones y
   hasta 5 objetivos con plazo. Historial en la ficha y comparación con la

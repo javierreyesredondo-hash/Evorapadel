@@ -3,7 +3,7 @@ import { textoFecha } from "@/lib/format";
 import { NIVEL_TEXTO, type NivelBD } from "@/lib/gestion";
 import { textoDiferencia, textoMediaEvaluacion, TIPO_TEXTO } from "@/lib/evaluaciones";
 import { TEXTO_SIN_ENTRENADOR, textoSinComparacion, type InformeEvaluacion } from "@/lib/informe";
-import { AREA_TEXTO, ESCALA_NOTAS } from "@/lib/metodologia";
+import { ESCALA_NOTAS, etiquetaGrupo } from "@/lib/metodologia";
 
 // Contenido de una evaluación a partir del MISMO modelo que el PDF
 // (src/lib/informe.ts). «app»: estilo oscuro de la aplicación (ficha de la
@@ -62,6 +62,7 @@ function Parrafos({ texto, clase }: { texto: string; clase: string }) {
 export function VistaInforme({ informe: m, variante = "app" }: { informe: InformeEvaluacion; variante?: Variante }) {
   const e = estilos[variante];
   const fecha = textoFecha(m.fecha);
+  const escala = m.escala ?? ESCALA_NOTAS;
   const contenido = (
     <>
       <header>
@@ -95,7 +96,7 @@ export function VistaInforme({ informe: m, variante = "app" }: { informe: Inform
             <li key={p.competenciaId} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2.5">
               <div className="min-w-0">
                 <p className={`font-semibold ${e.texto}`}>{p.nombre}</p>
-                <p className={`text-xs ${e.tenue}`}>{AREA_TEXTO[p.area]}</p>
+                <p className={`text-xs ${e.tenue}`}>{etiquetaGrupo(p)}</p>
               </div>
               <div className="flex items-center gap-3">
                 <span className="flex gap-1" aria-hidden="true">
@@ -104,14 +105,15 @@ export function VistaInforme({ informe: m, variante = "app" }: { informe: Inform
                   ))}
                 </span>
                 <span className={`w-32 text-sm font-semibold ${e.texto}`}>
-                  {p.puntuacion} · {ESCALA_NOTAS[p.puntuacion]}
+                  {p.puntuacion} · {escala[p.puntuacion]}
                 </span>
               </div>
             </li>
           ))}
         </ul>
         <p className={`mt-2 text-xs ${e.tenue}`}>
-          Escala: {Object.entries(ESCALA_NOTAS).map(([n, t]) => `${n} ${t}`).join(" · ")}.
+          Escala{m.metodologia ? ` (${m.metodologia.nombre} · v${m.metodologia.version})` : ""}:{" "}
+          {Object.entries(escala).map(([n, t]) => `${n} ${t}`).join(" · ")}.
         </p>
       </Seccion>
 

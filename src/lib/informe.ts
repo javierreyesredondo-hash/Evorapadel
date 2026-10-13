@@ -3,6 +3,7 @@
 // este mismo objeto, así que siempre coinciden. Sin React ni Supabase.
 
 import type { Comparacion, ObjetivoEvaluacion, PuntuacionCompetencia, TipoEvaluacion } from "./evaluaciones.ts";
+import type { Escala } from "./metodologia.ts";
 
 export type InformeEvaluacion = {
   escuela: string;
@@ -26,6 +27,10 @@ export type InformeEvaluacion = {
   hayAnterior: boolean;
   /** Fecha de emisión del informe (AAAA-MM-DD). */
   emitido: string;
+  /** Escala con la que se puntuó (la de su metodología; si falta, la de ÉVORA). */
+  escala?: Escala;
+  /** Metodología importada vigente al crear la evaluación (null: la propia de la escuela). */
+  metodologia?: { nombre: string; version: string } | null;
 };
 
 export const TEXTO_SIN_ENTRENADOR = "Equipo técnico de la escuela";

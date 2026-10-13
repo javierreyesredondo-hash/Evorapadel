@@ -17,6 +17,9 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/(.*)", headers: CABECERAS_SEGURIDAD }];
   },
+  // pdf.js (importador de metodologías) se carga con el import nativo de Node:
+  // su «worker» se importa dinámicamente desde el propio paquete.
+  serverExternalPackages: ["pdfjs-dist"],
   // Fuentes del informe PDF (se leen del disco al generarlo): que viajen con la función en Vercel.
   outputFileTracingIncludes: {
     "/evaluaciones/*/pdf": [
@@ -25,6 +28,7 @@ const nextConfig: NextConfig = {
       "./node_modules/@fontsource/barlow/files/barlow-latin-800-italic.woff",
       "./node_modules/@fontsource/barlow/files/barlow-latin-ext-800-italic.woff",
     ],
+    "/metodologia/importar/analizar": ["./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"],
   },
   cacheComponents: true,
   partialPrefetching: true,

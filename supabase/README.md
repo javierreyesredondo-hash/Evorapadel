@@ -9,6 +9,12 @@
 > esté desactivado y un guardado real de evaluación con su PDF (ver
 > «Verificación de solo lectura del proyecto»).
 >
+> **Migración 4 (`20261015090000_metodologias_importadas.sql`, importador de
+> metodologías desde PDF): preparada y probada en local, NO aplicada en
+> producción.** ⚠️ El código que la usa **no debe desplegarse antes de
+> aplicarla**: las evaluaciones y la metodología leen columnas nuevas y darían
+> error (ver «Metodologías importadas (migración 4)»).
+>
 > ⚠️ **No ejecutar `supabase db push`** contra este proyecto: como las migraciones
 > se aplicaron a mano, la CLI no tiene su historial e intentaría ejecutarlas otra
 > vez. Ver «Migraciones aplicadas a mano y CLI de Supabase».
@@ -20,13 +26,15 @@
 | `migrations/20261012190000_fundacion_escuelas.sql` | Migración 1: escuelas, perfiles, membresías, jugadores, grupos, RLS y permisos. |
 | `migrations/20261013090000_alta_primera_escuela.sql` | Migración 2: perfiles para usuarios registrados antes de migrar y alta segura de una escuela con su director. |
 | `migrations/20261014090000_evaluaciones.sql` | Migración 3: metodología (competencias), evaluaciones, puntuaciones 1–5, objetivos con plazo, RLS y guardado atómico `guardar_evaluacion`. |
+| `migrations/20261015090000_metodologias_importadas.sql` | Migración 4 (**sin aplicar**): metodologías importadas desde PDF (borrador / activa / archivada), versión de metodología de cada evaluación y competencias de la metodología activa. |
 | `tests/00_entorno_local.sql` | Simulación de Supabase para pruebas **locales** (roles, `auth`, `postgres` no superusuario). **Nunca** ejecutarlo en Supabase. |
 | `tests/05_antes_de_migrar.sql` | Prueba: un usuario se registra en Auth **antes** de aplicar las migraciones. |
 | `tests/10_aislamiento.sql` | 98 comprobaciones de aislamiento entre escuelas, permisos, estructura y alta de escuelas. |
 | `tests/20_evaluaciones.sql` | 75 comprobaciones de la migración 3: permisos por rol, aislamiento, validaciones, manipulación de identificadores, duplicados y borrados. |
+| `tests/30_metodologias.sql` | 49 comprobaciones de la migración 4: permisos, aislamiento, duplicados, activación, versiones e historial de evaluaciones. |
 | `../scripts/probar-migracion.sh` | PostgreSQL local desechable: aplica la migración como `postgres` y ejecuta las pruebas (`npm run test:db`). |
 | `../scripts/probar-migracion-supabase.sh` | Lo mismo sobre la **imagen oficial** `supabase/postgres` en Docker (`npm run test:db:supabase`). |
-| `../scripts/probar-mutaciones.mjs` | Introduce 34 fallos de seguridad, uno a uno, y exige que las pruebas los detecten (`npm run test:db:mutaciones`). |
+| `../scripts/probar-mutaciones.mjs` | Introduce 45 fallos de seguridad, uno a uno, y exige que las pruebas los detecten (`npm run test:db:mutaciones`). |
 
 ## Modelo
 
@@ -177,9 +185,11 @@ devuelven datos personales:
 -- 1) Tablas. Esperado: 10 (competencias, escuelas, evaluacion_objetivos,
 --    evaluacion_puntuaciones, evaluaciones, grupo_jugadores, grupos,
 --    jugadores, membresias, perfiles), todas con rowsecurity = true.
+--    Con la migración 4: 11 (+ metodologias).
 select tablename, rowsecurity from pg_tables where schemaname = 'public' order by 1;
 
 -- 2) Políticas. Esperado: 28 (16 de la migración 1 + 12 de la 3).
+--    Con la migración 4: 31 (+ 3 en metodologias, ninguna de borrado).
 --    Ninguna de borrado en competencias ni en evaluaciones: no se borran.
 select tablename, policyname, cmd from pg_policies where schemaname = 'public' order by 1, 2;
 
@@ -386,6 +396,57 @@ Borradores, inventario y procedimientos (acceso, supresión probada en local):
   sus evaluaciones (como con los jugadores).
 - Los PDF compartidos por WhatsApp salen del control de la app: recordar a
   los entrenadores que solo se envían a la familia del jugador.
+
+## Metodologías importadas (migración 4)
+
+> **Estado: preparada, NO aplicada.** No se ha ejecutado SQL en producción ni
+> `supabase db push`. Aplicarla es una decisión de la escuela (pasos abajo).
+
+### Qué añade
+
+| Objeto | Para qué |
+|---|---|
+| `metodologias` | Metodología importada de un PDF y revisada: nombre, versión, descripción, `contenido` (JSON validado: fases, principios, escala 1–5, competencias e indicadores con su categoría original, fichas y campos, textos), estado `borrador` → `activa` → `archivada`, y **referencia** del documento (nombre, bytes, páginas y huella SHA-256; el archivo **no** se guarda). |
+| `competencias.metodologia_id`, `competencias.grupo` | Las competencias evaluables de una metodología, con su categoría original (p. ej. «Toma de decisiones»). `area` pasa a ser opcional para ellas. |
+| `evaluaciones.metodologia_id` | Versión de metodología con la que se hizo cada evaluación (la fija un trigger; el cliente no puede elegirla ni cambiarla). |
+
+Reglas en la base de datos (triggers `SECURITY INVOKER`, `search_path = ''`):
+
+- Solo se crean **borradores**; el contenido solo se cambia en borrador. Una
+  metodología activa o archivada **no se modifica**: los cambios son una
+  versión nueva. No se borra nada (sin política ni permiso de `DELETE`).
+- **Una sola activa** por escuela. Activar archiva la anterior, desactiva sus
+  competencias (no las borra) y crea o reactiva las evaluables de la nueva.
+  Sin competencias evaluables no se puede activar (`22023`).
+- Las evaluaciones anteriores **conservan** sus notas, sus competencias y su
+  versión; editar una evaluación antigua no cambia su versión.
+- Sin duplicados: misma huella de PDF en la escuela, o mismo nombre y versión
+  (sin distinguir mayúsculas) → `23505`.
+- Permisos: la dirección crea, revisa, activa y archiva; el entrenador/a solo
+  consulta; otra escuela no ve nada; `anon` no tiene ningún permiso. Familias y
+  alumnos no tienen cuenta en la app.
+
+### Orden y cómo aplicarla (cuando la escuela lo decida)
+
+Requiere 1 → 2 → 3 aplicadas (ya lo están). La 4 no modifica datos existentes:
+añade una tabla, dos columnas opcionales en `competencias`, una en
+`evaluaciones`, y sustituye el índice único de nombres de competencia por uno
+equivalente que además distingue metodología y grupo.
+
+1. Copia de seguridad (*Database → Backups*).
+2. *SQL Editor*: pegar el archivo completo dentro de `begin; … commit;`
+   (o la CLI **solo** tras reconciliar el historial, ver arriba).
+3. Comprobar: 11 tablas y 31 políticas (consultas de «Verificación de solo
+   lectura»), y *Security Advisor* sin avisos nuevos.
+4. **Solo entonces** fusionar y desplegar la app que la usa. ⚠️ En orden
+   inverso, las pantallas de evaluaciones y metodología de producción darían
+   error (leen `metodologias`, `competencias.grupo` y
+   `evaluaciones.metodologia_id`). La migración está pensada para ser compatible
+   con la app anterior (solo añade; revisado en el código, **no probado** con
+   la app anterior desplegada).
+
+Probada en local: `npm run test:db` (incluye `30_metodologias.sql`),
+`npm run test:db:mutaciones` (45/45 fallos detectados) y `npm run test:e2e`.
 
 ## Secretos
 

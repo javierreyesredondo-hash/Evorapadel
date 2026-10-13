@@ -19,12 +19,12 @@ export type DecisionRuta = { tipo: "seguir" } | { tipo: "no-encontrado" };
 /**
  * Qué hacer con una ficha antes de renderizar (con Cache Components, notFound()
  * en la página llega tarde y el código sería 200):
- *   /jugadores/<x>, /grupos/<x>, /evaluaciones/<x> → 404 si <x> no es
- *   «nuevo»/«nueva» ni un UUID. Si es un
+ *   /jugadores/<x>, /grupos/<x>, /evaluaciones/<x>, /metodologia/importadas/<x>
+ *   → 404 si <x> no es «nuevo»/«nueva» ni un UUID. Si es un
  *   UUID, la página consulta la base de datos (RLS decide si se ve).
  */
 export function decidirRuta(pathname: string): DecisionRuta {
-  for (const prefijo of ["/jugadores/", "/grupos/", "/evaluaciones/"]) {
+  for (const prefijo of ["/jugadores/", "/grupos/", "/evaluaciones/", "/metodologia/importadas/"]) {
     if (!esFicha(pathname, prefijo)) continue;
     const id = idDeRuta(pathname, prefijo);
     if (id === null) return { tipo: "no-encontrado" }; // codificación inválida

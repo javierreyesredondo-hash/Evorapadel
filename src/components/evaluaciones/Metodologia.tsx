@@ -4,7 +4,7 @@ import { useActionState, useRef, useState } from "react";
 import { cambiarEstadoCompetencia, cargarMetodologiaBase, guardarCompetencia } from "@/app/acciones-evaluaciones";
 import type { EstadoFormulario } from "@/app/acciones-gestion";
 import type { Competencia } from "@/lib/evaluaciones";
-import { AREA_TEXTO, AREAS_COMPETENCIA } from "@/lib/metodologia";
+import { AREA_TEXTO, AREAS_COMPETENCIA, etiquetaGrupo } from "@/lib/metodologia";
 import { claseBoton } from "@/components/ui";
 import { Campo, claseCampo } from "@/components/campos";
 import { ErrorAccion, useAccion } from "@/components/gestion/Acciones";
@@ -95,14 +95,18 @@ export function FilaCompetencia({ competencia: c, esDirector }: { competencia: C
           {!c.activa && <span className="ml-2 text-xs font-bold text-naranja">Desactivada</span>}
         </p>
         <p className="text-xs text-tenue">
-          {AREA_TEXTO[c.area]} · orden {c.orden}
+          {etiquetaGrupo(c)} · orden {c.orden}
+          {c.metodologiaId && " · de la metodología importada"}
         </p>
       </div>
       {esDirector && (
         <div className="flex shrink-0 gap-2">
+          {/* Las competencias de una metodología importada no se editan (versión fija). */}
+          {!c.metodologiaId && (
           <button type="button" onClick={() => setEditando(true)} aria-label={`Editar ${c.nombre}`} className="inline-flex min-h-11 items-center rounded-full px-3 text-sm font-bold text-electrico hover:bg-noche-600">
             Editar
           </button>
+          )}
           <button
             type="button"
             disabled={pendiente}

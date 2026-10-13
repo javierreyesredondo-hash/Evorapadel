@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { clienteComo, unico } from "./credenciales";
+import { metodologiaSintetica } from "../src/lib/metodologias/pdf-de-prueba";
 
 /** Pantallas de la app (todas con datos reales de Supabase). */
 const RUTAS = [
@@ -13,6 +14,7 @@ const RUTAS = [
   "/evaluaciones",
   "/evaluaciones/nueva",
   "/metodologia",
+  "/metodologia/importar",
   "/perfil",
   "/entrenamiento",
 ];
@@ -179,6 +181,37 @@ test.describe("Evaluación e informe en el móvil @movil", () => {
     // En el formulario, la barra inferior no tapa «Guardar cambios».
     await page.goto(`/evaluaciones/${id}/editar`);
     await noTapado(page, "Guardar cambios");
+  });
+});
+
+test.describe("Importar metodología en el móvil @movil", () => {
+  test("revisión de la propuesta y ficha de la metodología: caben, controles táctiles y accesibilidad", async ({ page }) => {
+    // Solo se analiza (no se guarda nada) y un borrador por la API: la escuela A no activa nada.
+    await page.goto("/metodologia/importar");
+    await page.getByLabel("Documento de la metodología (PDF)").setInputFiles({
+      name: "metodo-sintetico.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(await metodologiaSintetica()),
+    });
+    await page.getByRole("button", { name: "Analizar PDF" }).click();
+    await expect(page.getByRole("heading", { name: "Datos generales" })).toBeVisible();
+    await sinDesbordamiento(page);
+    expect(await controlesPequenos(page), "controles por debajo de 44 px en la revisión").toEqual([]);
+    await sinInfraccionesAxe(page, "revisión de la metodología");
+    await noTapado(page, "Guardar como borrador");
+
+    const sb = await clienteComo("DIRECTOR_A");
+    const { data: esc } = await sb.from("escuelas").select("id").single();
+    const contenido = {
+      textos: [], fases: [{ numero: 1, nombre: "Observar", descripcion: "Mirar.", pagina: 2 }], principios: [], escala: [],
+      competencias: [{ nombre: "Técnica", grupo: "Criterios", descripcion: "", puntuable: true, evaluable: true, origen: "tabla", pagina: 3 }], fichas: [],
+    };
+    const { data } = await sb.from("metodologias").insert({ escuela_id: esc!.id, nombre: "Método Móvil", version: unico().slice(0, 20), contenido }).select("id").single();
+    await page.goto(`/metodologia/importadas/${data!.id}`);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Método Móvil");
+    await sinDesbordamiento(page);
+    expect(await controlesPequenos(page), "controles por debajo de 44 px en la ficha").toEqual([]);
+    await sinInfraccionesAxe(page, "ficha de la metodología");
   });
 });
 

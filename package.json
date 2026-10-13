@@ -25,6 +25,7 @@
     "@supabase/supabase-js": "^2.117.3",
     "next": "16.4.0",
     "pdf-lib": "1.17.1",
+    "pdfjs-dist": "6.3.289",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "^0.0.1"
@@ -38,7 +39,6 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.0",
-    "pdfjs-dist": "5.7.284",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
