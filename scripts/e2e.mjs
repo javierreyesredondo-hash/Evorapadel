@@ -20,5 +20,7 @@ const ejecutar = (cmd, args) => {
   const r = spawnSync(cmd, args, { stdio: "inherit", cwd: raiz, env: process.env });
   if (r.status !== 0) process.exit(r.status ?? 1);
 };
+// Datos que las pruebas necesitan en su estado inicial (solo Supabase local).
+ejecutar(process.execPath, [join(raiz, "scripts/supabase-local.mjs"), "restablecer"]);
 ejecutar("npx", ["next", "build"]);
 ejecutar("npx", ["playwright", "test", ...process.argv.slice(2)]);

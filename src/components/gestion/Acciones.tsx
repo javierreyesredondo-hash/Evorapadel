@@ -15,7 +15,7 @@ import { useAvisos } from "@/components/gestion/Avisos";
  * Ejecuta una Server Action sin formulario: un solo envío a la vez (el botón
  * se desactiva mientras tanto), confirmación con aviso y error en español.
  */
-function useAccion() {
+export function useAccion() {
   const { avisar } = useAvisos();
   const [pendiente, iniciar] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +40,7 @@ function useAccion() {
   return { pendiente, error, ejecutar };
 }
 
-function ErrorAccion({ error }: { error: string | null }) {
+export function ErrorAccion({ error }: { error: string | null }) {
   if (!error) return null;
   return (
     <p role="alert" className="mt-2 text-sm font-semibold text-naranja">

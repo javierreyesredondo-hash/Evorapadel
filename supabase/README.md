@@ -9,12 +9,14 @@
 |---|---|
 | `migrations/20261012190000_fundacion_escuelas.sql` | Migración 1: escuelas, perfiles, membresías, jugadores, grupos, RLS y permisos. |
 | `migrations/20261013090000_alta_primera_escuela.sql` | Migración 2: perfiles para usuarios registrados antes de migrar y alta segura de una escuela con su director. |
+| `migrations/20261014090000_evaluaciones.sql` | Migración 3: metodología (competencias), evaluaciones, puntuaciones 1–5, objetivos con plazo, RLS y guardado atómico `guardar_evaluacion`. |
 | `tests/00_entorno_local.sql` | Simulación de Supabase para pruebas **locales** (roles, `auth`, `postgres` no superusuario). **Nunca** ejecutarlo en Supabase. |
 | `tests/05_antes_de_migrar.sql` | Prueba: un usuario se registra en Auth **antes** de aplicar las migraciones. |
 | `tests/10_aislamiento.sql` | 98 comprobaciones de aislamiento entre escuelas, permisos, estructura y alta de escuelas. |
+| `tests/20_evaluaciones.sql` | 68 comprobaciones de la migración 3: permisos por rol, aislamiento, validaciones, manipulación de identificadores, duplicados y borrados. |
 | `../scripts/probar-migracion.sh` | PostgreSQL local desechable: aplica la migración como `postgres` y ejecuta las pruebas (`npm run test:db`). |
 | `../scripts/probar-migracion-supabase.sh` | Lo mismo sobre la **imagen oficial** `supabase/postgres` en Docker (`npm run test:db:supabase`). |
-| `../scripts/probar-mutaciones.mjs` | Introduce 18 fallos de seguridad, uno a uno, y exige que las pruebas los detecten (`npm run test:db:mutaciones`). |
+| `../scripts/probar-mutaciones.mjs` | Introduce 31 fallos de seguridad, uno a uno, y exige que las pruebas los detecten (`npm run test:db:mutaciones`). |
 
 ## Modelo
 
@@ -236,6 +238,81 @@ Limitaciones conocidas (no requieren cambiar políticas):
   escuela»); falta un selector.
 - Los jugadores pueden ser menores: la app guarda solo las columnas del
   esquema (sin datos de contacto). Revisar el RGPD antes de cargar datos reales.
+
+## Evaluaciones e informes (migración 3)
+
+### Orden de ejecución
+
+Las migraciones se aplican **en orden** y una sola vez: 1 → 2 → **3**
+(`20261014090000_evaluaciones.sql`). La 3 no cambia nada de las anteriores
+(solo añade tipos, tablas, funciones y políticas nuevas) y **no inserta datos**.
+Con la CLI: `supabase db push --dry-run` y después `supabase db push`. A mano:
+pegarla completa en el *SQL Editor* dentro de `begin; … commit;`.
+
+Después de aplicarla:
+
+1. *Advisors → Security Advisor*: sin avisos de RLS ni de `search_path`.
+2. La dirección entra en **Metodología** y pulsa «Cargar metodología base ÉVORA»
+   (o crea sus competencias). Sin competencias no se puede evaluar.
+3. Cada entrenador/a rellena su nombre en **Tu perfil** (aparece en los informes;
+   si no, el informe dice «Equipo técnico de la escuela»).
+
+### Modelo
+
+| Tabla | Contenido |
+|---|---|
+| `competencias` | Metodología de cada escuela: nombre, área (técnica, táctica, física, mental), qué se observa, orden, activa. No se borran: se desactivan. |
+| `evaluaciones` | Jugador, grupo (opcional, del jugador), autor (`entrenador_id = auth.uid()`, no elegible), tipo (`rapida` / `completa`), fecha, título, fortalezas, áreas de mejora, observaciones, `clave_envio` (anti-duplicados). |
+| `evaluacion_puntuaciones` | Nota entera 1–5 por competencia (una por competencia y evaluación). |
+| `evaluacion_objetivos` | Hasta 5 objetivos de mejora con plazo opcional (≥ fecha de la evaluación). |
+
+### Permisos (RLS)
+
+| Operación | Director/a | Entrenador/a |
+|---|---|---|
+| Ver competencias y evaluaciones de su escuela | ✓ | ✓ |
+| Crear, editar o desactivar competencias | ✓ | ✗ |
+| Crear evaluaciones | ✓ | ✓ |
+| Editar una evaluación (y reemplazar sus notas y objetivos) | todas las de su escuela | solo las suyas |
+| Borrar evaluaciones o competencias | ✗ (nadie desde la app) | ✗ |
+
+Integridad en la base de datos (no depende de la interfaz):
+
+- FK compuestas `(escuela_id, …)`: jugador, grupo, autor, competencias y notas
+  siempre de la **misma escuela**. No puede haber evaluaciones huérfanas
+  (`jugador_id` obligatorio; al borrar un jugador se borran sus evaluaciones).
+- Trigger `validar_grupo`: el jugador debe pertenecer al grupo indicado. Es
+  `SECURITY INVOKER` para no revelar asignaciones de otras escuelas.
+- `public.guardar_evaluacion(...)`: `SECURITY INVOKER` (aplica la RLS de quien
+  la llama). Guarda evaluación + notas + objetivos **en una transacción**,
+  valida fecha, notas y objetivos, y si se repite la misma `clave_envio`
+  devuelve la evaluación ya creada en vez de duplicarla.
+- Una evaluación de otra escuela, o una que no se puede editar, da el mismo
+  error que una inexistente (`P0002`).
+
+### Informes PDF
+
+- Se generan **en cada petición** en `/evaluaciones/<id>/pdf` (servidor,
+  `pdf-lib`), a partir de los datos guardados. **No se almacenan** en ningún
+  bucket: no hay enlaces públicos ni copias que caducar o borrar.
+- Acceso: sesión obligatoria (proxy + servidor) y RLS. Respuesta
+  `Cache-Control: private, no-store`. Otra escuela o inexistente → 404.
+- Compartir: el navegador descarga el PDF y usa el menú nativo del móvil
+  (`navigator.share` con archivos), donde aparece WhatsApp si está instalado.
+  Si el navegador no permite compartir archivos (p. ej. muchos de escritorio
+  y algunos Android antiguos), se ofrece «Descargar PDF» para adjuntarlo a mano.
+  La app nunca envía nada a terceros por su cuenta.
+
+### Pendiente antes de producción (RGPD, menores)
+
+- Base legal y consentimiento de las familias para evaluar y generar
+  informes de menores; información sobre el tratamiento.
+- Plazo de conservación de evaluaciones y procedimiento de supresión (hoy
+  solo la dirección puede borrar jugadores, y eso borra sus evaluaciones).
+- Revisar quién puede ver qué: hoy cualquier miembro de la escuela ve todas
+  sus evaluaciones (como con los jugadores).
+- Los PDF compartidos por WhatsApp salen del control de la app: recordar a
+  los entrenadores que solo se envían a la familia del jugador.
 
 ## Secretos
 

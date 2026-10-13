@@ -4,27 +4,29 @@
 
 Plataforma internacional de metodología y desarrollo de jugadores de pádel.
 
-## Estado: Fase 4 — jugadores y grupos reales
+## Estado: evaluaciones reales e informes PDF
 
 La app exige **iniciar sesión** (correo y contraseña de Supabase Auth) y
 trabaja con la escuela del usuario, leída de su membresía en el servidor.
 
 | Modo | Rutas | Datos |
 |---|---|---|
-| **Datos reales** (indicador verde) | `/`, `/jugadores…`, `/grupos…` | Supabase, con RLS |
+| **Datos reales** (indicador verde) | `/`, `/jugadores…`, `/grupos…`, `/evaluaciones…`, `/metodologia`, `/perfil` | Supabase, con RLS |
 | **Demostración** (aviso naranja) | `/demo…` | Ficticios, solo en el `localStorage` del navegador |
 
-- **Jugadores:** lista con búsqueda y filtros, alta, edición, archivado y
-  reactivación (no se borra nada). Campos = columnas de `public.jugadores`:
-  nombre, fecha de nacimiento, mano, nivel, posición, foco.
-- **Grupos:** lista, alta y edición (nombre y entrenador/a responsable), y
-  asignación / desasignación de jugadores desde el grupo o desde la ficha.
-- **Evaluaciones y objetivos** siguen solo en la demostración. Los datos
-  ficticios nunca se suben a Supabase ni se mezclan con los reales.
-- Las URL antiguas de la demo (`/evaluaciones`, `/objetivos`, `/jugadores/j1`…)
-  redirigen a `/demo/…`.
+- **Jugadores y grupos:** alta, edición, archivado, grupos y asignaciones.
+- **Metodología:** competencias de la escuela (la dirección las define o carga
+  la metodología base ÉVORA y la adapta). Escala fija de 1 a 5.
+- **Evaluaciones:** rápidas (en el entrenamiento, algunas competencias) o
+  completas (todas). Notas 1–5, fortalezas, áreas de mejora, observaciones y
+  hasta 5 objetivos con plazo. Historial en la ficha y comparación con la
+  evaluación anterior del mismo tipo (solo en competencias comunes).
+- **Informe PDF** por evaluación: vista previa, descarga y compartir desde el
+  menú del móvil (WhatsApp). Se genera con los datos guardados; no se almacena.
+- El seguimiento de objetivos con progreso sigue solo en la demostración. Los
+  datos ficticios nunca se suben a Supabase ni se mezclan con los reales.
 
-Detalle de permisos y decisiones: `supabase/README.md` → «Jugadores y grupos (Fase 4)».
+Detalle de permisos y decisiones: `supabase/README.md` (Fase 4 y migración 3).
 
 ### Sesión y acceso
 
@@ -73,7 +75,7 @@ npm run typecheck
 npm test           # lógica (node --test)
 npm run test:db    # migración SQL en un PostgreSQL local desechable
 npm run test:db:supabase    # misma prueba con la imagen oficial de Supabase (Docker)
-npm run test:db:mutaciones  # comprueba que las pruebas detectan fallos de seguridad
+npm run test:db:mutaciones  # comprueba que las pruebas detectan fallos de seguridad (31)
 npm run supabase:local        # Supabase local (Docker) con usuarios y escuelas de prueba
 npm run test:e2e   # compila y prueba acceso, RLS, jugadores/grupos y demo en Chromium (móvil y escritorio)
 npm run supabase:local:parar  # detiene el Supabase local
@@ -85,4 +87,6 @@ PostgREST y una pasarela mínima, aplica las migraciones de `supabase/` y crea
 datos **sintéticos** (dos escuelas «Demo», usuarios `@evora.invalid`). Escribe
 `.env.e2e.local` (ignorado por git), que usa `npm run test:e2e`.
 
-Stack: Next.js (App Router) · TypeScript · Tailwind CSS · Supabase (`@supabase/ssr`).
+Stack: Next.js (App Router) · TypeScript · Tailwind CSS · Supabase (`@supabase/ssr`) ·
+`pdf-lib` para los informes, con las fuentes de la marca de `@fontsource` (Barlow
+e Inter, licencia SIL OFL 1.1). `pdfjs-dist` solo en pruebas (leer los PDF).

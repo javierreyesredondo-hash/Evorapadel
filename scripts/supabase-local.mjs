@@ -152,6 +152,7 @@ async function arrancar() {
     DIRECTOR_A: "director-a@evora.invalid",
     ENTRENADOR_A: "entrenador-a@evora.invalid",
     DIRECTOR_B: "director-b@evora.invalid",
+    DIRECTOR_C: "director-c@evora.invalid",
     SIN_ESCUELA: "sin-escuela@evora.invalid",
   };
   for (const email of Object.values(usuarios)) {
@@ -168,6 +169,16 @@ async function arrancar() {
   psql(`insert into public.membresias (escuela_id, usuario_id, rol)
         select e.id, u.id, 'entrenador' from public.escuelas e, auth.users u
         where e.nombre = 'Escuela Demo A' and u.email = '${usuarios.ENTRENADOR_A}';`, "postgres");
+  // Escuela C: sin metodología, para probar la carga de la metodología base.
+  psql(`select privado.crear_escuela_con_director('Escuela Demo C', '${usuarios.DIRECTOR_C}');`, "postgres");
+  // Metodología de A y B: la base de la app (src/lib/metodologia.ts).
+  const { METODOLOGIA_BASE } = await import("../src/lib/metodologia.ts");
+  const valores = METODOLOGIA_BASE.map((c, i) =>
+    `('${c.nombre.replaceAll("'", "''")}', '${c.area}', '${c.descripcion.replaceAll("'", "''")}', ${i + 1})`).join(", ");
+  psql(`insert into public.competencias (escuela_id, nombre, area, descripcion, orden)
+        select e.id, v.nombre, v.area::public.area_competencia, v.descripcion, v.orden
+        from public.escuelas e, (values ${valores}) as v (nombre, area, descripcion, orden)
+        where e.nombre in ('Escuela Demo A', 'Escuela Demo B');`, "postgres");
 
   const lineas = [
     "# Generado por scripts/supabase-local.mjs — Supabase LOCAL, datos sintéticos. No subir.",
@@ -196,8 +207,19 @@ function parar({ silencioso = false } = {}) {
   if (!silencioso) console.log("Supabase local detenido y borrado.");
 }
 
+/**
+ * Deja la «Escuela Demo C» sin metodología (local): las pruebas E2E comprueban
+ * la carga de la metodología base y deben poder repetirse.
+ */
+function restablecer() {
+  psql(`delete from public.competencias
+        where escuela_id = (select id from public.escuelas where nombre = 'Escuela Demo C')
+          and not exists (select 1 from public.evaluacion_puntuaciones p where p.competencia_id = competencias.id);`, "postgres");
+}
+
 const orden = process.argv[2] ?? "arrancar";
 if (orden === "parar") parar();
+else if (orden === "restablecer") restablecer();
 else arrancar().catch((e) => {
   console.error(`\n✗ ${e.message}`);
   process.exitCode = 1;

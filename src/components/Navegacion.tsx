@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
-import { IconDemo, IconGrupos, IconInicio, IconJugadores } from "@/components/icons";
+import { IconDemo, IconEvaluaciones, IconGrupos, IconInicio, IconJugadores } from "@/components/icons";
 
 const enlaces = [
   { href: "/", texto: "Inicio", Icono: IconInicio },
   { href: "/jugadores", texto: "Jugadores", Icono: IconJugadores },
   { href: "/grupos", texto: "Grupos", Icono: IconGrupos },
-  // Evaluaciones y objetivos: solo en la demostración (datos ficticios).
+  { href: "/evaluaciones", texto: "Evaluar", Icono: IconEvaluaciones },
+  // Seguimiento de objetivos con progreso: solo en la demostración (datos ficticios).
   { href: "/demo", texto: "Demo", Icono: IconDemo },
 ] as const;
 
@@ -41,7 +42,7 @@ function BarraInferior({ pathname }: { pathname: string | null }) {
       aria-label="Principal"
       className="fixed inset-x-0 bottom-0 z-20 border-t border-noche-500 bg-noche/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
     >
-      <ul className="mx-auto grid max-w-md grid-cols-4">
+      <ul className="mx-auto grid max-w-md grid-cols-5">
         {enlaces.map(({ href, texto, Icono }) => {
           const activo = esActivo(pathname, href);
           return (
