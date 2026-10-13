@@ -58,6 +58,23 @@ en Supabase. No ejecutar `supabase db push` sin reconciliar antes el historial
 (con Cache Components, `notFound()` en la página llegaba tarde y el código era
 200). Ver `src/lib/rutas.ts`.
 
+### Privacidad y piloto
+
+Antes de cargar datos reales de menores: [`docs/privacidad/`](docs/privacidad/README.md)
+(información a familias, inventario de datos, conservación, procedimiento de
+derechos y acciones pendientes en Supabase y Vercel).
+
+### Marca
+
+Logo en SVG con el texto en trazos (sin depender de fuentes):
+- `public/marca/evora-padel.svg`: principal;
+- `public/marca/evora-padel-compacto.svg`: compacta;
+- `public/marca/evora-simbolo.svg`: símbolo;
+- `src/app/icon.svg`: favicon;
+- `src/app/apple-icon.png`: icono del iPhone.
+
+Se regeneran con `npm run marca`. El componente `<Logo>` usa los mismos trazos.
+
 ## Desarrollo
 
 ```bash

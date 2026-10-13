@@ -41,6 +41,26 @@ test.describe("Sin sesión", () => {
   });
 });
 
+test.describe("Cabeceras de seguridad", () => {
+  test("la app no se puede incrustar en otras webs ni revela la tecnología", async ({ request }) => {
+    for (const ruta of ["/acceso", "/icon.svg"]) {
+      const r = await request.get(ruta);
+      const h = r.headers();
+      expect(h["content-security-policy"], ruta).toContain("frame-ancestors 'none'");
+      expect(h["x-frame-options"], ruta).toBe("DENY");
+      expect(h["x-content-type-options"], ruta).toBe("nosniff");
+      expect(h["referrer-policy"], ruta).toBe("strict-origin-when-cross-origin");
+      expect(h["x-powered-by"], ruta).toBeUndefined();
+    }
+  });
+
+  test("la pantalla de acceso no ofrece registro", async ({ page }) => {
+    await page.goto("/acceso");
+    await expect(page.getByRole("link", { name: /regístrate|registrarse|crear cuenta/i })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /regístrate|registrarse|crear cuenta/i })).toHaveCount(0);
+  });
+});
+
 test.describe("Formulario de acceso", () => {
   test("valida en español antes de llamar a Supabase", async ({ page }) => {
     await page.goto("/acceso");

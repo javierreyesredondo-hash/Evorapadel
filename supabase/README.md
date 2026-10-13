@@ -372,6 +372,10 @@ Integridad en la base de datos (no depende de la interfaz):
 
 ### Pendiente antes de producción (RGPD, menores)
 
+Borradores, inventario y procedimientos (acceso, supresión probada en local):
+[`docs/privacidad/`](../docs/privacidad/README.md).
+
+
 - Base legal y consentimiento de las familias para evaluar y generar
   informes de menores; información sobre el tratamiento.
 - Plazo de conservación de evaluaciones y procedimiento de supresión. Hoy la
