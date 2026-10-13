@@ -153,6 +153,7 @@ async function arrancar() {
     ENTRENADOR_A: "entrenador-a@evora.invalid",
     DIRECTOR_B: "director-b@evora.invalid",
     DIRECTOR_C: "director-c@evora.invalid",
+    DIRECTOR_D: "director-d@evora.invalid",
     SIN_ESCUELA: "sin-escuela@evora.invalid",
   };
   for (const email of Object.values(usuarios)) {
@@ -171,14 +172,17 @@ async function arrancar() {
         where e.nombre = 'Escuela Demo A' and u.email = '${usuarios.ENTRENADOR_A}';`, "postgres");
   // Escuela C: sin metodología, para probar la carga de la metodología base.
   psql(`select privado.crear_escuela_con_director('Escuela Demo C', '${usuarios.DIRECTOR_C}');`, "postgres");
-  // Metodología de A y B: la base de la app (src/lib/metodologia.ts).
+  // Escuela D: importación de metodologías desde PDF (activarlas cambia las
+  // competencias de la escuela; aislada para no afectar a las otras pruebas).
+  psql(`select privado.crear_escuela_con_director('Escuela Demo D', '${usuarios.DIRECTOR_D}');`, "postgres");
+  // Metodología de A, B y D: la base de la app (src/lib/metodologia.ts).
   const { METODOLOGIA_BASE } = await import("../src/lib/metodologia.ts");
   const valores = METODOLOGIA_BASE.map((c, i) =>
     `('${c.nombre.replaceAll("'", "''")}', '${c.area}', '${c.descripcion.replaceAll("'", "''")}', ${i + 1})`).join(", ");
   psql(`insert into public.competencias (escuela_id, nombre, area, descripcion, orden)
         select e.id, v.nombre, v.area::public.area_competencia, v.descripcion, v.orden
         from public.escuelas e, (values ${valores}) as v (nombre, area, descripcion, orden)
-        where e.nombre in ('Escuela Demo A', 'Escuela Demo B');`, "postgres");
+        where e.nombre in ('Escuela Demo A', 'Escuela Demo B', 'Escuela Demo D');`, "postgres");
 
   const lineas = [
     "# Generado por scripts/supabase-local.mjs — Supabase LOCAL, datos sintéticos. No subir.",

@@ -12,7 +12,7 @@ import {
   type TipoEvaluacion,
 } from "@/lib/evaluaciones";
 import type { InformeEvaluacion } from "@/lib/informe";
-import type { AreaCompetencia } from "@/lib/metodologia";
+import { escalaDe, type AreaCompetencia } from "@/lib/metodologia";
 import type { ContextoEscuela, Resultado } from "@/lib/supabase/gestion";
 
 // Lecturas de competencias y evaluaciones REALES de la escuela activa.
@@ -33,7 +33,7 @@ const uno = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ?
 export async function listarCompetencias(ctx: ContextoEscuela): Promise<Resultado<Competencia[]>> {
   const { data, error } = await ctx.supabase
     .from("competencias")
-    .select("id, nombre, area, descripcion, orden, activa")
+    .select("id, nombre, area, grupo, metodologia_id, descripcion, orden, activa")
     .eq("escuela_id", ctx.escuelaId)
     .order("orden")
     .order("nombre");
@@ -46,7 +46,9 @@ export async function listarCompetencias(ctx: ContextoEscuela): Promise<Resultad
     datos: (data ?? []).map((c) => ({
       id: c.id as string,
       nombre: c.nombre as string,
-      area: c.area as AreaCompetencia,
+      area: (c.area as AreaCompetencia | null) ?? null,
+      grupo: (c.grupo as string | null) ?? null,
+      metodologiaId: (c.metodologia_id as string | null) ?? null,
       descripcion: (c.descripcion as string | null) ?? null,
       orden: c.orden as number,
       activa: c.activa === true,
@@ -149,13 +151,16 @@ export type EvaluacionCompleta = {
   grupo: { id: string; nombre: string } | null;
   puntuaciones: PuntuacionCompetencia[];
   objetivos: ObjetivoEvaluacion[];
+  /** Metodología importada con la que se hizo (versión y escala), o null. */
+  metodologia: { id: string; nombre: string; version: string; escala: unknown } | null;
 };
 
 const SELECT_DETALLE = [
   "id, tipo, fecha, created_at, titulo, fortalezas, mejoras, observaciones, entrenador_id",
   "jugador:jugadores(id, nombre, nivel, activo)",
   "grupo:grupos(id, nombre)",
-  "evaluacion_puntuaciones(puntuacion, competencia:competencias(id, nombre, area, orden))",
+  "evaluacion_puntuaciones(puntuacion, competencia:competencias(id, nombre, area, grupo, orden))",
+  "metodologia:metodologias(id, nombre, version, escala:contenido->escala)",
   "evaluacion_objetivos(descripcion, plazo, orden)",
 ].join(", ");
 
@@ -178,13 +183,13 @@ export async function obtenerEvaluacion(ctx: ContextoEscuela, id: string): Promi
   if (!jugador) return { ok: true, datos: null };
   const notas = (Array.isArray(f.evaluacion_puntuaciones) ? f.evaluacion_puntuaciones : []) as {
     puntuacion: Nota;
-    competencia: { id: string; nombre: string; area: AreaCompetencia; orden: number } | { id: string; nombre: string; area: AreaCompetencia; orden: number }[] | null;
+    competencia: CompetenciaNota | CompetenciaNota[] | null;
   }[];
   const puntuaciones = ordenarPuntuaciones(
     notas
       .map((n) => ({ n, c: uno(n.competencia) }))
       .filter((x): x is { n: (typeof notas)[number]; c: NonNullable<typeof x.c> } => x.c !== null)
-      .map(({ n, c }) => ({ competenciaId: c.id, nombre: c.nombre, area: c.area, orden: c.orden, puntuacion: n.puntuacion })),
+      .map(({ n, c }) => ({ competenciaId: c.id, nombre: c.nombre, area: c.area, grupo: c.grupo ?? null, orden: c.orden, puntuacion: n.puntuacion })),
   );
   const objetivos = ((Array.isArray(f.evaluacion_objetivos) ? f.evaluacion_objetivos : []) as (ObjetivoEvaluacion & { orden: number })[])
     .sort((a, b) => a.orden - b.orden)
@@ -205,9 +210,12 @@ export async function obtenerEvaluacion(ctx: ContextoEscuela, id: string): Promi
       grupo: uno(f.grupo as { id: string; nombre: string } | null),
       puntuaciones,
       objetivos,
+      metodologia: uno(f.metodologia as EvaluacionCompleta["metodologia"] | EvaluacionCompleta["metodologia"][]),
     },
   };
 }
+
+type CompetenciaNota = { id: string; nombre: string; area: AreaCompetencia | null; grupo: string | null; orden: number };
 
 /** ¿Puede el usuario editarla? Igual que la política evaluaciones_editar (RLS decide en último término). */
 export function puedeEditar(ctx: ContextoEscuela, ev: Pick<EvaluacionCompleta, "entrenadorId">): boolean {
@@ -290,6 +298,8 @@ export async function obtenerInforme(
       comparacion: compararEvaluaciones(ev.puntuaciones, anterior.datos),
       hayAnterior: anterior.datos !== null,
       emitido: hoyIso(),
+      escala: escalaDe(ev.metodologia?.escala),
+      metodologia: ev.metodologia ? { nombre: ev.metodologia.nombre, version: ev.metodologia.version } : null,
       },
     },
   };

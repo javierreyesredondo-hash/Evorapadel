@@ -36,6 +36,7 @@ docker cp "$MIGRACIONES/." "$NOMBRE:/tmp/migraciones/" >/dev/null
 docker cp "$RAIZ/supabase/tests/05_antes_de_migrar.sql" "$NOMBRE:/tmp/pruebas/" >/dev/null
 docker cp "$RAIZ/supabase/tests/10_aislamiento.sql" "$NOMBRE:/tmp/pruebas/" >/dev/null
 docker cp "$RAIZ/supabase/tests/20_evaluaciones.sql" "$NOMBRE:/tmp/pruebas/" >/dev/null
+docker cp "$RAIZ/supabase/tests/30_metodologias.sql" "$NOMBRE:/tmp/pruebas/" >/dev/null
 
 # Usuario registrado en Auth antes de aplicar las migraciones.
 docker exec -i "$NOMBRE" psql -U supabase_admin -d postgres -X -q -v ON_ERROR_STOP=1 \
@@ -47,7 +48,7 @@ for m in "$MIGRACIONES"/*.sql; do
     -f "/tmp/migraciones/$(basename "$m")" >/dev/null
 done
 
-for prueba in 10_aislamiento 20_evaluaciones; do
+for prueba in 10_aislamiento 20_evaluaciones 30_metodologias; do
   docker exec -i "$NOMBRE" psql -U supabase_admin -d postgres -X -q -v ON_ERROR_STOP=1 --single-transaction \
     -f "/tmp/pruebas/$prueba.sql" 2>&1 >/dev/null | sed -e 's/^psql:[^ ]* NOTICE:  /  /'
 done

@@ -165,6 +165,8 @@ export async function guardarCompetencia(_previo: EstadoFormulario, datos: FormD
       : ctx.supabase.from("competencias").update(v.valor).eq("id", id).eq("escuela_id", ctx.escuelaId).select("id");
   const { data, error } = await consulta;
   if (error?.code === "23505") return { errores: { nombre: "Ya existe una competencia con ese nombre en tu escuela." }, valores };
+  // 22023: la base de datos protege las competencias de una metodología importada.
+  if (error?.code === "22023") return { error: "Las competencias de una metodología importada no se editan: importa una versión nueva.", valores };
   if (error) return { error: mensajeErrorBD(error), valores };
   if (!data?.length) return { error: "No se ha encontrado la competencia.", valores };
   refresh();

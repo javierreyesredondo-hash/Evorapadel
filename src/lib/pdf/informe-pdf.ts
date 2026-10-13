@@ -11,7 +11,7 @@ import { textoFecha } from "../format.ts";
 import { NIVEL_TEXTO, type NivelBD } from "../gestion.ts";
 import { textoDiferencia, textoMediaEvaluacion, TIPO_TEXTO } from "../evaluaciones.ts";
 import { TEXTO_SIN_ENTRENADOR, textoSinComparacion, type InformeEvaluacion } from "../informe.ts";
-import { AREA_TEXTO, ESCALA_NOTAS } from "../metodologia.ts";
+import { ESCALA_NOTAS, etiquetaGrupo } from "../metodologia.ts";
 import type { BytesFuente, FuentesInforme } from "./fuentes.ts";
 
 // ------------------------------------------------------------------ medidas
@@ -306,24 +306,25 @@ export async function generarPdfInforme(
   const xBarra = MARGEN.x + 238;
   const segmento = { ancho: 25, alto: 9, hueco: 3 };
   const xNota = xBarra + 5 * (segmento.ancho + segmento.hueco) + 10;
+  const escala = m.escala ?? ESCALA_NOTAS;
   for (const p of m.puntuaciones) {
     const lineasNombre = envolver(p.nombre, (t) => semi.ancho(t, 10), 225);
     const alto = Math.max(lineasNombre.length * 13 + 12, 30);
     lienzo.espacio(alto);
     const yFila = lienzo.y;
     lineasNombre.forEach((linea, i) => lienzo.escribir(linea, MARGEN.x, yFila - 12 - i * 13, { fuente: semi, tam: 10, color: C.noche }));
-    lienzo.escribir(AREA_TEXTO[p.area], MARGEN.x, yFila - 12 - lineasNombre.length * 13, { fuente: normal, tam: 7.8, color: C.tenue });
+    lienzo.escribir(etiquetaGrupo(p), MARGEN.x, yFila - 12 - lineasNombre.length * 13, { fuente: normal, tam: 7.8, color: C.tenue });
     for (let i = 1; i <= 5; i++) {
       const x = xBarra + (i - 1) * (segmento.ancho + segmento.hueco);
       lienzo.rect(x, yFila - 18, segmento.ancho, segmento.alto, i <= p.puntuacion ? C.verde : C.vacio, i <= p.puntuacion ? C.noche : undefined);
     }
-    lienzo.escribir(`${p.puntuacion} · ${ESCALA_NOTAS[p.puntuacion]}`, xNota, yFila - 17, { fuente: semi, tam: 9.5, color: C.noche });
+    lienzo.escribir(`${p.puntuacion} · ${escala[p.puntuacion]}`, xNota, yFila - 17, { fuente: semi, tam: 9.5, color: C.noche });
     lienzo.y -= alto;
     lienzo.pagina.drawLine({ start: { x: MARGEN.x, y: lienzo.y + 4 }, end: { x: PAGINA.ancho - MARGEN.x, y: lienzo.y + 4 }, thickness: 0.4, color: C.linea });
   }
   lienzo.y -= 4;
   lienzo.parrafo(
-    `Escala: ${Object.entries(ESCALA_NOTAS).map(([n, t]) => `${n} ${t}`).join(" · ")}.`,
+    `Escala${m.metodologia ? ` (${m.metodologia.nombre} · v${m.metodologia.version})` : ""}: ${Object.entries(escala).map(([n, t]) => `${n} ${t}`).join(" · ")}.`,
     pequeno,
   );
 

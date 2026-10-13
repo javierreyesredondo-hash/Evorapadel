@@ -13,7 +13,7 @@ import {
   type ObjetivoEvaluacion,
   type TipoEvaluacion,
 } from "@/lib/evaluaciones";
-import { AREA_TEXTO, ESCALA_NOTAS } from "@/lib/metodologia";
+import { ESCALA_NOTAS, etiquetaGrupo, type Escala } from "@/lib/metodologia";
 import { claseBoton } from "@/components/ui";
 import { Campo, claseCampo, MensajeError } from "@/components/campos";
 import { useTrasGuardar } from "@/components/gestion/useTrasGuardar";
@@ -40,6 +40,8 @@ type Props = {
   competencias: Competencia[];
   inicial: InicialEvaluacion;
   hoy: string;
+  /** Escala de la metodología con la que se evalúa (por defecto, la de ÉVORA). */
+  escala?: Escala;
 };
 
 const NOTAS = [1, 2, 3, 4, 5] as const;
@@ -60,7 +62,7 @@ export function FormularioEvaluacionReal(props: Props) {
   return <Formulario key={version} {...props} reiniciar={() => setVersion((v) => v + 1)} />;
 }
 
-function Formulario({ jugadores, competencias, inicial, hoy, reiniciar }: Props & { reiniciar: () => void }) {
+function Formulario({ jugadores, competencias, inicial, hoy, escala = ESCALA_NOTAS, reiniciar }: Props & { reiniciar: () => void }) {
   const formRef = useRef<HTMLFormElement>(null);
   const claveRef = useRef<string | null>(null);
   const [estado, accion, pendiente] = useActionState<EstadoFormulario, FormData>(guardarEvaluacion, {});
@@ -187,7 +189,7 @@ function Formulario({ jugadores, competencias, inicial, hoy, reiniciar }: Props 
           </h2>
           <p className="text-xs text-tenue">
             {tipo === "completa" ? "Puntúa todas de 1 a 5." : "Puntúa de 1 a 5 solo lo que hayas observado."} Escala:{" "}
-            {Object.entries(ESCALA_NOTAS).map(([n, t]) => `${n} ${t}`).join(" · ")}.
+            {Object.entries(escala).map(([n, t]) => `${n} ${t}`).join(" · ")}.
           </p>
         </div>
         {err("notas") && (
@@ -213,7 +215,7 @@ function Formulario({ jugadores, competencias, inicial, hoy, reiniciar }: Props 
               <div aria-hidden="true" className="flex items-baseline justify-between gap-3">
                 <span className="font-semibold">{c.nombre}</span>
                 <span className="shrink-0 text-xs text-tenue">
-                  {valor ? `${valor} · ${ESCALA_NOTAS[Number(valor) as 1]}` : `${AREA_TEXTO[c.area]}${c.activa ? "" : " · desactivada"}`}
+                  {valor ? `${valor} · ${escala[Number(valor) as 1]}` : `${etiquetaGrupo(c)}${c.activa ? "" : " · desactivada"}`}
                 </span>
               </div>
               {c.descripcion && <p className="mt-1 text-xs text-tenue">{c.descripcion}</p>}
@@ -226,7 +228,7 @@ function Formulario({ jugadores, competencias, inicial, hoy, reiniciar }: Props 
                       value={n}
                       checked={valor === String(n)}
                       onChange={() => setNotas((prev) => ({ ...prev, [c.id]: String(n) }))}
-                      aria-label={`${c.nombre}: ${n} (${ESCALA_NOTAS[n]})`}
+                      aria-label={`${c.nombre}: ${n} (${escala[n]})`}
                       className="peer absolute inset-0 size-full cursor-pointer opacity-0"
                     />
                     <span

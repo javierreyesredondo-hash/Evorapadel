@@ -4,6 +4,7 @@ import { hoyIso } from "@/lib/format";
 import { esUuid } from "@/lib/gestion";
 import { contextoEscuela, listarJugadores } from "@/lib/supabase/gestion";
 import { listarCompetencias } from "@/lib/supabase/evaluaciones";
+import { metodologiaActiva } from "@/lib/supabase/metodologias";
 import { Cabecera, EnlaceBoton, Vacio } from "@/components/ui";
 import { Cargando, ErrorCarga } from "@/components/gestion/Estados";
 import { FormularioEvaluacionReal } from "@/components/evaluaciones/FormularioEvaluacionReal";
@@ -25,9 +26,10 @@ async function Contenido({ searchParams }: { searchParams: Promise<Record<string
   const params = await searchParams;
   const ctx = await contextoEscuela();
   if (!ctx) return <ErrorCarga />;
-  const [jugadores, competencias] = await Promise.all([listarJugadores(ctx), listarCompetencias(ctx)]);
+  const [jugadores, competencias, activa] = await Promise.all([listarJugadores(ctx), listarCompetencias(ctx), metodologiaActiva(ctx)]);
   if (!jugadores.ok) return <ErrorCarga mensaje={jugadores.mensaje} />;
   if (!competencias.ok) return <ErrorCarga mensaje={competencias.mensaje} />;
+  if (!activa.ok) return <ErrorCarga mensaje={activa.mensaje} />;
 
   const activas = competencias.datos.filter((c) => c.activa);
   if (activas.length === 0) {
@@ -53,6 +55,7 @@ async function Contenido({ searchParams }: { searchParams: Promise<Record<string
     <FormularioEvaluacionReal
       jugadores={evaluables}
       competencias={activas}
+      escala={activa.datos?.escala}
       hoy={hoy}
       inicial={{
         jugadorId: pedido?.id ?? "",

@@ -29,7 +29,12 @@ export const LIMITES_EVALUACION = {
 export type Competencia = {
   id: string;
   nombre: string;
-  area: AreaCompetencia;
+  /** Área de ÉVORA (competencias propias) o null si viene de una metodología importada. */
+  area: AreaCompetencia | null;
+  /** Grupo original de la metodología importada (p. ej. «Toma de decisiones»). */
+  grupo?: string | null;
+  /** Metodología importada a la que pertenece (no se edita). */
+  metodologiaId?: string | null;
   descripcion: string | null;
   orden: number;
   activa: boolean;
@@ -41,7 +46,8 @@ export type Nota = 1 | 2 | 3 | 4 | 5;
 export type PuntuacionCompetencia = {
   competenciaId: string;
   nombre: string;
-  area: AreaCompetencia;
+  area: AreaCompetencia | null;
+  grupo?: string | null;
   orden: number;
   puntuacion: Nota;
 };
