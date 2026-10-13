@@ -3,25 +3,18 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { clienteComo, unico } from "./credenciales";
 
-/** Pantallas con datos reales (Supabase) y de la demostración (ficticias). */
-const RUTAS: [string, RegExp][] = [
-  ["/", /Datos reales de tu escuela/],
-  ["/jugadores", /Datos reales de tu escuela/],
-  ["/jugadores/nuevo", /Datos reales de tu escuela/],
-  ["/grupos", /Datos reales de tu escuela/],
-  ["/grupos/nuevo", /Datos reales de tu escuela/],
-  ["/evaluaciones", /Datos reales de tu escuela/],
-  ["/evaluaciones/nueva", /Datos reales de tu escuela/],
-  ["/metodologia", /Datos reales de tu escuela/],
-  ["/perfil", /Datos reales de tu escuela/],
-  ["/entrenamiento", /Datos reales de tu escuela/],
-  ["/demo", /Modo demostración/],
-  ["/demo/jugadores", /Modo demostración/],
-  ["/demo/jugadores/j1", /Modo demostración/],
-  ["/demo/evaluaciones", /Modo demostración/],
-  ["/demo/evaluaciones/nueva?jugador=j1", /Modo demostración/],
-  ["/demo/objetivos", /Modo demostración/],
-  ["/demo/objetivos/nuevo", /Modo demostración/],
+/** Pantallas de la app (todas con datos reales de Supabase). */
+const RUTAS = [
+  "/",
+  "/jugadores",
+  "/jugadores/nuevo",
+  "/grupos",
+  "/grupos/nuevo",
+  "/evaluaciones",
+  "/evaluaciones/nueva",
+  "/metodologia",
+  "/perfil",
+  "/entrenamiento",
 ];
 
 /** Zona táctil mínima: 44 × 44 px (recomendación de Apple/WCAG 2.5.5). */
@@ -64,6 +57,14 @@ async function controlesPequenos(page: Page): Promise<string[]> {
   }, MIN_TACTIL);
 }
 
+/** Jugador sintético de la escuela A (misma sesión que estas pruebas). */
+async function jugadorSintetico(): Promise<string> {
+  const sb = await clienteComo("DIRECTOR_A");
+  const { data: esc } = await sb.from("escuelas").select("id").single();
+  const { data } = await sb.from("jugadores").insert({ escuela_id: esc!.id, nombre: `Móvil ${unico()}` }).select("id").single();
+  return data!.id as string;
+}
+
 async function sinInfraccionesAxe(page: Page, contexto: string) {
   const { violations } = await new AxeBuilder({ page }).analyze();
   const resumen = violations.map((v) => `${v.id} (${v.impact}): ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`);
@@ -71,13 +72,9 @@ async function sinInfraccionesAxe(page: Page, contexto: string) {
 }
 
 test.describe("Experiencia móvil @movil", () => {
-  for (const [ruta, modo] of RUTAS) {
-    test(`${ruta}: cabe en pantalla, barra inferior, indicador de modo, controles táctiles y accesibilidad`, async ({
-      page,
-    }) => {
+  for (const ruta of RUTAS) {
+    test(`${ruta}: cabe en pantalla, barra inferior, controles táctiles y accesibilidad`, async ({ page }) => {
       await page.goto(ruta);
-      // Siempre queda claro si los datos son reales o de la demostración.
-      await expect(page.getByText(modo)).toBeVisible();
       // Los datos reales llegan en streaming: esperar al contenido antes de medir.
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       const barra = page.getByRole("navigation", { name: "Principal" });
@@ -94,10 +91,9 @@ test.describe("Experiencia móvil @movil", () => {
   }
 
   test("filtros activos y página 404 también cumplen tamaño táctil y accesibilidad", async ({ page }) => {
-    await page.goto("/demo/jugadores");
-    await page.getByRole("button", { name: "Avanzado" }).click();
-    await page.getByRole("searchbox", { name: "Buscar jugador" }).fill("lu");
-    await expect(page.getByRole("button", { name: "Limpiar filtros" })).toBeVisible();
+    await page.goto("/jugadores");
+    await page.getByRole("group", { name: "Filtrar por nivel" }).getByRole("button", { name: "Avanzado" }).click();
+    await page.getByRole("searchbox", { name: "Buscar jugador" }).fill("zz");
     expect(await controlesPequenos(page)).toEqual([]);
     await sinInfraccionesAxe(page, "/jugadores con filtros");
 
@@ -108,46 +104,32 @@ test.describe("Experiencia móvil @movil", () => {
     await sinInfraccionesAxe(page, "404");
   });
 
-  test("formularios con errores siguen siendo accesibles", async ({ page }) => {
-    await page.goto("/demo/evaluaciones/nueva");
+  test("formularios reales con errores siguen siendo accesibles", async ({ page }) => {
+    await page.goto("/evaluaciones/nueva");
     await page.getByRole("button", { name: "Guardar evaluación" }).click();
-    await expect(page.getByText("Revisa los campos marcados.")).toBeVisible();
+    await expect(page.getByText("Revisa los campos marcados.").filter({ visible: true })).toBeVisible();
     await sinInfraccionesAxe(page, "evaluación con errores");
 
-    await page.goto("/demo/objetivos/nuevo");
-    await page.getByRole("button", { name: "Crear objetivo" }).click();
-    await expect(page.getByText("Elige un área.")).toBeVisible();
-    await expect(page.getByRole("radiogroup", { name: "Área" })).toHaveAttribute("aria-invalid", "true");
-    await sinInfraccionesAxe(page, "objetivo con errores");
+    await page.goto("/jugadores/nuevo");
+    await page.getByRole("button", { name: "Crear jugador" }).click();
+    await expect(page.getByLabel("Nombre y apellidos")).toHaveAttribute("aria-invalid", "true");
+    await sinInfraccionesAxe(page, "jugador con errores");
   });
 
-  test("tocar una nota la selecciona y los botones de progreso responden al tacto", async ({ page }) => {
-    await page.goto("/demo/evaluaciones/nueva?jugador=j1");
+  test("evaluación real en el móvil: tocar una nota, barra que no tapa y foco en el primer error", async ({ page }) => {
+    const id = await jugadorSintetico();
+    await page.goto(`/evaluaciones/nueva?jugador=${id}&tipo=completa`);
     const nota = page.getByRole("radio", { name: "Golpes de fondo: 3 (Competente)" });
     await nota.tap();
     await expect(nota).toBeChecked();
-    await expect(page.getByText("Puntúa de 1 a 5.")).toHaveCount(0);
 
-    await page.goto("/demo/objetivos");
-    const fila = page.getByRole("listitem").filter({ hasText: "Remates por 3 ganadores" });
-    await fila.getByRole("button", { name: /Sumar 1/ }).tap();
-    await expect(fila).toContainText("8 de 10");
-  });
-
-  test("la barra inferior no tapa los botones de guardar", async ({ page }) => {
-    await page.goto("/demo/evaluaciones/nueva?jugador=j1");
+    // La barra inferior fija no tapa «Guardar evaluación».
     await noTapado(page, "Guardar evaluación");
-    await page.goto("/demo/objetivos/nuevo");
-    await noTapado(page, "Crear objetivo");
-  });
 
-  test("el foco va al primer error aunque esté bajo la barra fija", async ({ page }) => {
-    await page.goto("/demo/evaluaciones/nueva?jugador=j1");
-    await page.getByLabel("Tipo de evaluación").selectOption("Seguimiento");
-    for (const c of ["Golpes de fondo", "Juego en la red", "Juego aéreo", "Lectura táctica", "Condición física"]) {
+    // Completa sin la última competencia: el foco va a ella aunque esté bajo la barra fija.
+    for (const c of ["Juego en la red", "Juego aéreo", "Lectura táctica", "Condición física"]) {
       await page.getByRole("radio", { name: new RegExp(`^${c}: 3 `) }).check();
     }
-    // Falta solo «Fortaleza mental», el último criterio.
     await page.getByRole("button", { name: "Guardar evaluación" }).click();
     const primera = page.getByRole("radio", { name: "Fortaleza mental: 1 (Inicial)" });
     await expect(primera).toBeFocused();
@@ -164,9 +146,12 @@ test.describe("Experiencia móvil @movil", () => {
     await page.getByRole("link", { name: "Nuevo", exact: true }).tap();
     await expect(page).toHaveURL(/\/jugadores\/nuevo$/);
     await expect(barra.getByRole("link", { name: "Jugadores" })).toHaveAttribute("aria-current", "page");
-    await barra.getByRole("link", { name: "Demo" }).tap();
-    await expect(page).toHaveURL(/\/demo$/);
-    await expect(barra.getByRole("link", { name: "Demo" })).toHaveAttribute("aria-current", "page");
+    await barra.getByRole("link", { name: "Entrenar" }).tap();
+    await expect(page).toHaveURL(/\/entrenamiento$/);
+    await expect(barra.getByRole("link", { name: "Entrenar" })).toHaveAttribute("aria-current", "page");
+    // Solo funciones reales: la barra no tiene pestaña de demostración.
+    await expect(barra.getByRole("link")).toHaveCount(4);
+    await expect(barra.getByRole("link", { name: "Demo", exact: true })).toHaveCount(0);
   });
 });
 

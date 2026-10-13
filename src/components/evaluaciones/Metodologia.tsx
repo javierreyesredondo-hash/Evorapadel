@@ -6,7 +6,7 @@ import type { EstadoFormulario } from "@/app/acciones-gestion";
 import type { Competencia } from "@/lib/evaluaciones";
 import { AREA_TEXTO, AREAS_COMPETENCIA } from "@/lib/metodologia";
 import { claseBoton } from "@/components/ui";
-import { Campo, claseCampo } from "@/components/formularios/campos";
+import { Campo, claseCampo } from "@/components/campos";
 import { ErrorAccion, useAccion } from "@/components/gestion/Acciones";
 import { useRespuestaFormulario } from "@/components/gestion/useTrasGuardar";
 

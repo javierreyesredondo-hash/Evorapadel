@@ -1,6 +1,5 @@
 // Lógica pura de la gestión REAL de jugadores y grupos (Supabase), sin React
-// ni Next, para poder probarla con `node --test`. No depende de la demo: los
-// datos ficticios viven aparte (src/lib/demo-data.ts, src/lib/almacen.tsx).
+// ni Next, para poder probarla con `node --test`.
 //
 // Los valores y límites reflejan EXACTAMENTE el esquema de
 // supabase/migrations/20261012190000_fundacion_escuelas.sql.

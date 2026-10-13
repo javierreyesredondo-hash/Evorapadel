@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
-import { IconDemo, IconEvaluaciones, IconGrupos, IconInicio, IconJugadores } from "@/components/icons";
+import { IconEvaluaciones, IconGrupos, IconInicio, IconJugadores } from "@/components/icons";
 
 const enlaces = [
   { href: "/", texto: "Inicio", Icono: IconInicio },
@@ -11,8 +11,6 @@ const enlaces = [
   { href: "/grupos", texto: "Grupos", Icono: IconGrupos },
   // Tareas de entrenamiento (también para el director que entrena): sus grupos y evaluaciones.
   { href: "/entrenamiento", texto: "Entrenar", Icono: IconEvaluaciones, tambien: ["/evaluaciones"] },
-  // Seguimiento de objetivos con progreso: solo en la demostración (datos ficticios).
-  { href: "/demo", texto: "Demo", Icono: IconDemo },
 ] as const;
 
 function esActivo(pathname: string | null, enlace: (typeof enlaces)[number]) {
@@ -45,7 +43,7 @@ function BarraInferior({ pathname }: { pathname: string | null }) {
       aria-label="Principal"
       className="fixed inset-x-0 bottom-0 z-20 border-t border-noche-500 bg-noche/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
     >
-      <ul className="mx-auto grid max-w-md grid-cols-5">
+      <ul className="mx-auto grid max-w-md grid-cols-4">
         {enlaces.map((enlace) => {
           const { href, texto, Icono } = enlace;
           const activo = esActivo(pathname, enlace);

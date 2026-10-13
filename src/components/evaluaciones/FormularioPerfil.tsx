@@ -4,7 +4,7 @@ import { useActionState, useRef } from "react";
 import { guardarPerfil } from "@/app/acciones-evaluaciones";
 import type { EstadoFormulario } from "@/app/acciones-gestion";
 import { claseBoton } from "@/components/ui";
-import { Campo, claseCampo } from "@/components/formularios/campos";
+import { Campo, claseCampo } from "@/components/campos";
 import { useRespuestaFormulario } from "@/components/gestion/useTrasGuardar";
 
 export function FormularioPerfil({ nombre }: { nombre: string }) {

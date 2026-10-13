@@ -14,7 +14,7 @@ import {
   type JugadorReal,
 } from "@/lib/gestion";
 import { claseBoton } from "@/components/ui";
-import { Campo, claseCampo } from "@/components/formularios/campos";
+import { Campo, claseCampo } from "@/components/campos";
 import { useTrasGuardar } from "@/components/gestion/useTrasGuardar";
 
 type Props = { jugador?: JugadorReal; hoy: string };

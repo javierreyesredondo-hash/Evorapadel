@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "./fixtures";
+import { esperar404EnConsola, expect, test } from "./fixtures";
 import { clienteComo, credenciales, unico, type UsuarioPrueba } from "./credenciales";
 
 // Jugadores y grupos REALES contra el Supabase local (migraciones reales + RLS),
@@ -42,7 +42,6 @@ test.describe("Jugadores reales", () => {
     const nombre = `Jugador E2E ${unico()}`;
     await entrar(page, "DIRECTOR_A");
     await page.goto("/jugadores/nuevo");
-    await expect(visible(page, /^Datos reales de tu escuela\.$/)).toBeVisible();
 
     // Validación en español antes de guardar.
     await page.getByRole("button", { name: "Crear jugador" }).click();
@@ -296,34 +295,29 @@ test.describe("Aislamiento entre escuelas en la app", () => {
   });
 });
 
-test.describe("Demostración separada", () => {
-  test("los datos reales y los ficticios no se mezclan", async ({ page }) => {
-    const nombre = `Real No Demo ${unico()}`;
+test.describe("Sin demostración", () => {
+  test("solo hay funciones reales: ni pestaña, ni tarjetas, ni rutas de la demo", async ({ page }) => {
+    esperar404EnConsola();
+    const nombre = `Real Sin Demo ${unico()}`;
     await entrar(page, "DIRECTOR_A");
     await crearJugador(page, nombre);
 
-    // Las pantallas reales no usan el almacenamiento de la demo.
-    const demoGuardada = () => page.evaluate(() => window.localStorage.getItem("evora-padel-demo-v1"));
-    expect(await demoGuardada()).toBeNull();
-    await page.goto("/jugadores");
-    await expect(visible(page, "Lucía Marván")).toHaveCount(0);
-
-    // El inicio real solo presenta como demostración lo que sigue siéndolo.
+    // Ni la navegación ni el inicio llevan a la demostración.
     await page.goto("/");
-    await expect(visible(page, "Seguimiento de objetivos con progreso (demostración)")).toBeVisible();
-    await expect(visible(page, /Evaluaciones y objetivos \(datos ficticios\)/)).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Demo", exact: true })).toHaveCount(0);
+    await expect(page.locator('a[href^="/demo"]')).toHaveCount(0);
+    await expect(visible(page, /demostración|datos ficticios/i)).toHaveCount(0);
 
-    // La demo muestra sus jugadores ficticios, no los reales, y lo indica.
-    await page.goto("/demo/jugadores");
-    await expect(visible(page, /Modo demostración/)).toBeVisible();
-    await expect(visible(page, "Lucía Marván")).toBeVisible();
-    await expect(visible(page, nombre)).toHaveCount(0);
-    await expect(visible(page, /^Datos reales de tu escuela\.$/)).toHaveCount(0);
+    // Las pantallas reales no usan el almacenamiento local de la antigua demo.
+    await page.goto("/jugadores");
+    await expect(visible(page, nombre)).toBeVisible();
+    expect(await page.evaluate(() => window.localStorage.getItem("evora-padel-demo-v1"))).toBeNull();
 
-    // Las URL antiguas de la demo siguen funcionando.
-    await page.goto("/objetivos");
-    await expect(page).toHaveURL(/\/demo\/objetivos$/);
-    await page.goto("/jugadores/j1");
-    await expect(page).toHaveURL(/\/demo\/jugadores\/j1$/);
+    // Las antiguas rutas de la demo ya no existen (404, sin redirigir a nada ficticio).
+    for (const ruta of ["/demo", "/demo/jugadores/j1", "/demo/objetivos", "/objetivos", "/jugadores/j1"]) {
+      const r = await page.goto(ruta);
+      expect(r?.status(), ruta).toBe(404);
+      await expect(page.getByRole("heading", { name: "Página no encontrada" })).toBeVisible();
+    }
   });
 });

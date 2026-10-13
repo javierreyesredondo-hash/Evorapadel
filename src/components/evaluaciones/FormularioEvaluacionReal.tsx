@@ -15,7 +15,7 @@ import {
 } from "@/lib/evaluaciones";
 import { AREA_TEXTO, ESCALA_NOTAS } from "@/lib/metodologia";
 import { claseBoton } from "@/components/ui";
-import { Campo, claseCampo, MensajeError } from "@/components/formularios/campos";
+import { Campo, claseCampo, MensajeError } from "@/components/campos";
 import { useTrasGuardar } from "@/components/gestion/useTrasGuardar";
 
 export type JugadorEvaluable = { id: string; nombre: string; grupos: { id: string; nombre: string }[] };

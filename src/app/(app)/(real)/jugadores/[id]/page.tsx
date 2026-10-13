@@ -122,9 +122,6 @@ async function Ficha({ params }: { params: Promise<{ id: string }> }) {
             {!hayMetodologia && " Antes, la dirección debe definir la metodología de la escuela."}
           </Vacio>
         )}
-        <p className="mt-3 text-xs text-tenue">
-          El seguimiento de objetivos con progreso todavía solo está en la demostración.
-        </p>
       </Seccion>
     </>
   );

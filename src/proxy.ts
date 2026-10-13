@@ -37,9 +37,6 @@ export async function proxy(request: NextRequest) {
   if (decision.tipo === "no-encontrado") {
     return conSesion(NextResponse.rewrite(new URL(RUTA_NO_ENCONTRADA, request.url)), respuesta);
   }
-  if (decision.tipo === "redirigir") {
-    return conSesion(NextResponse.redirect(new URL(decision.destino, request.url)), respuesta);
-  }
 
   return respuesta;
 }

@@ -5,7 +5,7 @@ import { useActionState } from "react";
 import { iniciarSesion, type EstadoAcceso } from "@/app/acciones-acceso";
 import { MAX_CONTRASENA, MAX_EMAIL } from "@/lib/acceso";
 import { claseBoton } from "@/components/ui";
-import { Campo, claseCampo } from "@/components/formularios/campos";
+import { Campo, claseCampo } from "@/components/campos";
 
 export function FormularioAcceso() {
   const siguiente = useSearchParams().get("siguiente") ?? "";

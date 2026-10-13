@@ -8,7 +8,7 @@ import {
   type ResultadoAccion,
 } from "@/app/acciones-gestion";
 import { claseBoton } from "@/components/ui";
-import { claseCampo } from "@/components/formularios/campos";
+import { claseCampo } from "@/components/campos";
 import { useAvisos } from "@/components/gestion/Avisos";
 
 /**
