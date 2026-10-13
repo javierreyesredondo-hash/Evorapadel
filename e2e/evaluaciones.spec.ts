@@ -290,28 +290,34 @@ test.describe("Informes PDF", () => {
     const id = await evaluacionApi(a.sb, a, [4, 4]);
     // Simula un móvil que puede compartir archivos (menú nativo: WhatsApp, etc.).
     await page.addInitScript(() => {
-      const w = window as unknown as { __compartido?: { nombre: string; tipo: string; tamano: number; titulo?: string } };
+      const w = window as unknown as { __compartido?: { nombre: string; tipo: string; tamano: number; titulo?: string; texto?: string } };
       Object.defineProperty(navigator, "canShare", { configurable: true, value: (d: { files?: File[] }) => !!d.files?.length });
       Object.defineProperty(navigator, "share", {
         configurable: true,
-        value: async (d: { files: File[]; title?: string }) => {
-          w.__compartido = { nombre: d.files[0].name, tipo: d.files[0].type, tamano: d.files[0].size, titulo: d.title };
+        value: async (d: { files: File[]; title?: string; text?: string }) => {
+          w.__compartido = { nombre: d.files[0].name, tipo: d.files[0].type, tamano: d.files[0].size, titulo: d.title, texto: d.text };
         },
       });
     });
     await entrar(page, "DIRECTOR_A");
     await page.goto(`/evaluaciones/${id}`);
-    await page.getByRole("link", { name: "Informe PDF" }).click();
+    // El acceso al informe es lo primero del detalle (también tras guardar, que lleva aquí).
+    const bloque = page.getByRole("region", { name: "Informe para la familia" });
+    await expect(bloque).toBeInViewport();
+    await bloque.getByRole("link", { name: "Ver informe PDF" }).click();
     await expect(page).toHaveURL(new RegExp(`/evaluaciones/${id}/informe$`));
     await expect(visible(page, "PDF listo.")).toBeVisible();
     const vista = page.getByRole("article", { name: "Vista previa del informe" });
     await expect(vista).toContainText(a.jugador.nombre);
     await expect(vista).toContainText("Escuela Demo A");
 
-    await page.getByRole("button", { name: "Compartir (WhatsApp…)" }).click();
+    const acciones = page.getByRole("region", { name: "Enviar el informe" });
+    await expect(acciones.getByRole("button", { name: "Compartir informe" })).toBeInViewport();
+    await acciones.getByRole("button", { name: "Compartir informe" }).click();
     await expect(visible(page, "Informe compartido.")).toBeVisible();
-    const compartido = await page.evaluate(() => (window as unknown as { __compartido: unknown }).__compartido);
+    const compartido = await page.evaluate(() => (window as unknown as { __compartido: { texto?: string } }).__compartido);
     expect(compartido).toMatchObject({ tipo: "application/pdf", nombre: expect.stringMatching(/^informe-jugador-compartir-.+\.pdf$/) });
+    expect(compartido.texto).toBeUndefined(); // con texto, algunas apps de iOS descartan el archivo
 
     const [descarga] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Descargar PDF" }).click()]);
     expect(descarga.suggestedFilename()).toMatch(/^informe-jugador-compartir-.+\.pdf$/);
@@ -320,16 +326,21 @@ test.describe("Informes PDF", () => {
     await expect(visible(page, "PDF listo.")).toBeVisible();
   });
 
-  test("sin compartir archivos, se ofrece la descarga", async ({ page }) => {
+  test("sin compartir archivos, «Compartir informe» descarga el PDF", async ({ page }) => {
     const a = await escenario("DIRECTOR_A", "Jugador Descarga");
     const id = await evaluacionApi(a.sb, a, [3]);
-    await page.addInitScript(() => Object.defineProperty(navigator, "canShare", { configurable: true, value: () => false }));
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "canShare", { configurable: true, value: () => false });
+      Object.defineProperty(navigator, "share", { configurable: true, value: async () => { throw new Error("no debería llamarse"); } });
+    });
     await entrar(page, "DIRECTOR_A");
     await page.goto(`/evaluaciones/${id}/informe`);
     await expect(visible(page, "PDF listo.")).toBeVisible();
-    await expect(page.getByRole("button", { name: /Compartir/ })).toHaveCount(0);
-    await expect(visible(page, /Descarga el PDF y adjúntalo en WhatsApp/)).toBeVisible();
+    await expect(visible(page, /«Compartir informe» descarga el PDF/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Descargar PDF" })).toBeEnabled();
+    const [descarga] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Compartir informe" }).click()]);
+    expect(descarga.suggestedFilename()).toMatch(/^informe-jugador-descarga-.+\.pdf$/);
+    await expect(visible(page, /el PDF se ha descargado\. Adjúntalo en WhatsApp/)).toBeVisible();
   });
 
   test("el nombre del perfil aparece como entrenador/a en el informe", async ({ page }) => {

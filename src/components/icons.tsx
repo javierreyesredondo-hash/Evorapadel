@@ -103,3 +103,29 @@ export function IconBaja(props: IconProps) {
     </Base>
   );
 }
+
+export function IconPdf(props: IconProps) {
+  return (
+    <Base width={18} height={18} {...props}>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M14 3v5h5M9 13h6M9 17h4" />
+    </Base>
+  );
+}
+
+export function IconCompartir(props: IconProps) {
+  return (
+    <Base width={18} height={18} {...props}>
+      <path d="M12 15V3M8 7l4-4 4 4" />
+      <path d="M8 11H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-2" />
+    </Base>
+  );
+}
+
+export function IconDescargar(props: IconProps) {
+  return (
+    <Base width={18} height={18} {...props}>
+      <path d="M12 3v12M8 11l4 4 4-4M4 19h16" />
+    </Base>
+  );
+}

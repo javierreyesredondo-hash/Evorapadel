@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { contextoEscuela } from "@/lib/supabase/gestion";
 import { obtenerInforme, puedeEditar } from "@/lib/supabase/evaluaciones";
 import { EnlaceBoton } from "@/components/ui";
+import { IconPdf } from "@/components/icons";
 import { Cargando, ErrorCarga, NoEncontrado } from "@/components/gestion/Estados";
 import { VistaInforme } from "@/components/evaluaciones/VistaInforme";
 
@@ -28,14 +29,24 @@ async function Contenido({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <>
-      <div className="mb-5 flex flex-wrap gap-3">
-        <EnlaceBoton href={`/evaluaciones/${evaluacion.id}/informe`}>Informe PDF</EnlaceBoton>
-        {puedeEditar(ctx, evaluacion) && (
-          <EnlaceBoton href={`/evaluaciones/${evaluacion.id}/editar`} variante="secundario">
-            Editar
+      {/* Lo primero de la página: el informe para la familia (también tras guardar, que lleva aquí). */}
+      <section aria-label="Informe para la familia" className="mb-6 rounded-2xl bg-noche-700 p-4 ring-1 ring-electrico/40">
+        <p className="font-bold text-electrico">Informe para la familia</p>
+        <p className="mt-1 text-sm text-blanco/80">
+          Genera el PDF con los datos guardados de esta evaluación y compártelo desde el móvil (WhatsApp, correo…).
+        </p>
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <EnlaceBoton href={`/evaluaciones/${evaluacion.id}/informe`} className="w-full sm:w-auto">
+            <IconPdf />
+            Ver informe PDF
           </EnlaceBoton>
-        )}
-      </div>
+          {puedeEditar(ctx, evaluacion) && (
+            <EnlaceBoton href={`/evaluaciones/${evaluacion.id}/editar`} variante="secundario" className="w-full sm:w-auto">
+              Editar evaluación
+            </EnlaceBoton>
+          )}
+        </div>
+      </section>
       <VistaInforme informe={informe} />
       <p className="mt-8">
         <Link href={`/jugadores/${evaluacion.jugador.id}`} className="inline-flex min-h-11 items-center font-semibold text-electrico">
