@@ -11,9 +11,13 @@ trabaja con la escuela del usuario, leída de su membresía en el servidor.
 
 | Modo | Rutas | Datos |
 |---|---|---|
-| **Datos reales** (indicador verde) | `/`, `/jugadores…`, `/grupos…`, `/evaluaciones…`, `/metodologia`, `/perfil` | Supabase, con RLS |
+| **Datos reales** (indicador verde) | `/`, `/jugadores…`, `/grupos…`, `/entrenamiento`, `/evaluaciones…`, `/metodologia`, `/perfil` | Supabase, con RLS |
 | **Demostración** (aviso naranja) | `/demo…` | Ficticios, solo en el `localStorage` del navegador |
 
+- **Roles:** una misma persona puede **dirigir y entrenar** con una sola cuenta y
+  sesión. «Entrenar» (`/entrenamiento`) reúne sus grupos, jugadores y
+  evaluaciones; la sección «Dirección» del inicio, la gestión. Los permisos se
+  comprueban en el servidor y con RLS (ver `supabase/README.md` → Roles).
 - **Jugadores y grupos:** alta, edición, archivado, grupos y asignaciones.
 - **Metodología:** competencias de la escuela (la dirección las define o carga
   la metodología base ÉVORA y la adapta). Escala fija de 1 a 5.
@@ -75,7 +79,7 @@ npm run typecheck
 npm test           # lógica (node --test)
 npm run test:db    # migración SQL en un PostgreSQL local desechable
 npm run test:db:supabase    # misma prueba con la imagen oficial de Supabase (Docker)
-npm run test:db:mutaciones  # comprueba que las pruebas detectan fallos de seguridad (31)
+npm run test:db:mutaciones  # comprueba que las pruebas detectan fallos de seguridad (34)
 npm run supabase:local        # Supabase local (Docker) con usuarios y escuelas de prueba
 npm run test:e2e   # compila y prueba acceso, RLS, jugadores/grupos y demo en Chromium (móvil y escritorio)
 npm run supabase:local:parar  # detiene el Supabase local

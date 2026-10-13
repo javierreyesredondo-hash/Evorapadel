@@ -27,6 +27,7 @@ set client_min_messages = notice;
 \set clave2  '''0c1a0002-0000-4000-8000-000000000000'''
 \set clave3  '''0c1a0003-0000-4000-8000-000000000000'''
 \set clave4  '''0c1a0004-0000-4000-8000-000000000000'''
+\set clave5  '''0c1a0005-0000-4000-8000-000000000000'''
 
 -- Llamada a guardar_evaluacion con valores por defecto razonables.
 create function prueba.guardar(
@@ -306,6 +307,33 @@ select prueba.ok((select count(*) from public.evaluaciones where escuela_id = :e
   'los intentos de F no modificaron nada de E');
 
 
+-- ------------------------------------- el director también entrena (misma cuenta)
+-- Un único usuario y una única membresía (rol director): entrenar es una tarea
+-- (ser entrenador_id de un grupo, ser autor de evaluaciones), no un rol aparte.
+select set_config('request.jwt.claim.sub', :dir_e, false);
+set role authenticated;
+select prueba.ok(prueba.filas(format('update public.grupos set entrenador_id = %L where id = %L', :dir_e, :gru_e)) = 1,
+  'director E: se asigna como entrenador de un grupo con su misma cuenta');
+select prueba.ok(prueba.filas(format('insert into public.grupo_jugadores (escuela_id, grupo_id, jugador_id) values (%L, %L, %L)', :esc_e, :gru_e, :jug_e2)) = 1,
+  'director E: como entrenador, asigna jugadores a su grupo');
+select prueba.ok(
+  prueba.guardar(:esc_e, null, :clave5, :jug_e2, :gru_e, format('[{"competencia": "%s", "puntuacion": 4}]', :com_e2)::jsonb) is not null,
+  'director E: evalúa a un jugador de su grupo');
+select prueba.ok((select entrenador_id from public.evaluaciones where clave_envio = :clave5) = :dir_e::uuid,
+  'director E: queda como autor (entrenador) de esa evaluación');
+select prueba.ok(
+  prueba.guardar(:esc_e, (select id from public.evaluaciones where clave_envio = :clave5), null, null, :gru_e,
+    format('[{"competencia": "%s", "puntuacion": 5}]', :com_e2)::jsonb) is not null,
+  'director E: edita su propia evaluación de entrenador');
+select prueba.ok(prueba.filas(format('insert into public.competencias (escuela_id, nombre, area) values (%L, %L, %L)', :esc_e, 'Saque', 'tecnica')) = 1
+             and prueba.filas(format('update public.grupos set nombre = %L where id = %L', 'Grupo E dirigido y entrenado', :gru_e)) = 1
+             and prueba.filas(format('update public.escuelas set nombre = %L where id = %L', 'Escuela E', :esc_e)) = 1,
+  'director E: tras entrenar conserva todos sus permisos de dirección (metodología, grupos, escuela)');
+select prueba.ok((select count(*) from public.membresias where usuario_id = :dir_e) = 1,
+  'dirigir y entrenar no duplica usuarios ni membresías');
+reset role;
+
+
 -- ------------------------------------------------- integridad y borrados
 set role service_role;
 select prueba.error(format('delete from public.competencias where id = %L', :com_e2), '23503',
@@ -322,7 +350,7 @@ select prueba.ok((select grupo_id from public.evaluaciones where clave_envio = :
   'si se borra el grupo, la evaluación se conserva sin grupo');
 delete from public.jugadores where id = :jug_e1;
 select prueba.ok(not exists (select 1 from public.evaluaciones where clave_envio = :clave1)
-             and (select count(*) from public.evaluacion_puntuaciones where escuela_id = :esc_e) = 1,
+             and (select count(*) from public.evaluacion_puntuaciones where escuela_id = :esc_e) = 2,
   'borrar un jugador (solo director o service_role) borra sus evaluaciones y notas');
 reset role;
 

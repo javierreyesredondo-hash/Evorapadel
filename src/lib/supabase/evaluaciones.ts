@@ -116,6 +116,23 @@ export async function listarEvaluacionesRecientes(ctx: ContextoEscuela, limite =
   return { ok: true, datos: (data ?? []).map((f) => aResumen(f as Record<string, unknown>)) };
 }
 
+/** Últimas evaluaciones hechas por el usuario actual (autor = su id de sesión). */
+export async function listarMisEvaluaciones(ctx: ContextoEscuela, limite = 10): Promise<Resultado<ResumenEvaluacion[]>> {
+  const { data, error } = await ctx.supabase
+    .from("evaluaciones")
+    .select(`${SELECT_RESUMEN}, jugador:jugadores(id, nombre)`)
+    .eq("escuela_id", ctx.escuelaId)
+    .eq("entrenador_id", ctx.usuarioId)
+    .order("fecha", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(limite);
+  if (error) {
+    registrar("mis evaluaciones", error);
+    return { ok: false, mensaje: ERROR_LECTURA };
+  }
+  return { ok: true, datos: (data ?? []).map((f) => aResumen(f as Record<string, unknown>)) };
+}
+
 // ------------------------------------------------------------------ detalle
 
 export type EvaluacionCompleta = {

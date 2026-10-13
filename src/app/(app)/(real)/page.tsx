@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { contextoEscuela, listarGrupos, listarJugadores } from "@/lib/supabase/gestion";
-import { NOMBRE_ROL } from "@/lib/acceso";
+import { textoFunciones } from "@/lib/gestion";
 import { EnlaceBoton, Seccion } from "@/components/ui";
 import { Cargando, ErrorCarga } from "@/components/gestion/Estados";
 
@@ -17,6 +17,8 @@ async function Inicio() {
   const ctx = await contextoEscuela();
   if (!ctx) return <ErrorCarga />;
   const [jugadores, grupos] = await Promise.all([listarJugadores(ctx), listarGrupos(ctx)]);
+  // Grupos que entrena (filtrados de los ya leídos por su id de sesión).
+  const misGrupos = grupos.ok ? grupos.datos.filter((g) => g.entrenador_id === ctx.usuarioId) : [];
   if (!jugadores.ok || !grupos.ok) return <ErrorCarga mensaje={!jugadores.ok ? jugadores.mensaje : !grupos.ok ? grupos.mensaje : undefined} />;
 
   const activos = jugadores.datos.filter((j) => j.activo);
@@ -31,7 +33,7 @@ async function Inicio() {
     <>
       <section className="relative overflow-hidden rounded-3xl bg-electrico p-5 text-noche">
         <p className="text-sm font-semibold">
-          {ctx.escuelaNombre} · {NOMBRE_ROL[ctx.rol]}
+          {ctx.escuelaNombre} · <span data-prueba="funciones">{textoFunciones(ctx.rol, misGrupos.length)}</span>
         </p>
         <h1 className="mt-1 font-display text-4xl font-extrabold uppercase italic leading-[0.95] tracking-tight sm:text-5xl">
           Observa.
@@ -54,16 +56,39 @@ async function Inicio() {
         ))}
       </ul>
 
-      <Seccion titulo="Acciones rápidas">
+      {/* Las tareas de entrenamiento y las de dirección, separadas pero en la misma
+          sesión: un director que entrena ve las dos sin cambiar de cuenta. */}
+      <Seccion titulo="Entrenamiento">
+        <p className="mb-3 text-sm text-tenue">
+          {misGrupos.length > 0
+            ? `Entrenas ${misGrupos.length === 1 ? "1 grupo" : `${misGrupos.length} grupos`}: ${misGrupos.map((g) => g.nombre).join(", ")}.`
+            : "No tienes grupos asignados como entrenador/a."}
+        </p>
         <div className="flex flex-wrap gap-3">
-          <EnlaceBoton href="/jugadores/nuevo">Nuevo jugador</EnlaceBoton>
-          {ctx.rol === "director" && (
-            <EnlaceBoton href="/grupos/nuevo" variante="secundario">
-              Nuevo grupo
-            </EnlaceBoton>
-          )}
+          <EnlaceBoton href="/entrenamiento">Mi entrenamiento</EnlaceBoton>
+          <EnlaceBoton href="/evaluaciones/nueva" variante="secundario">
+            Nueva evaluación
+          </EnlaceBoton>
+          <EnlaceBoton href="/jugadores/nuevo" variante="secundario">
+            Nuevo jugador
+          </EnlaceBoton>
         </div>
       </Seccion>
+
+      {ctx.rol === "director" && (
+        <Seccion titulo="Dirección">
+          <p className="mb-3 text-sm text-tenue">Gestión de la escuela: grupos y entrenadores, y metodología.</p>
+          <div className="flex flex-wrap gap-3">
+            <EnlaceBoton href="/grupos/nuevo">Nuevo grupo</EnlaceBoton>
+            <EnlaceBoton href="/grupos" variante="secundario">
+              Gestionar grupos
+            </EnlaceBoton>
+            <EnlaceBoton href="/metodologia" variante="secundario">
+              Metodología
+            </EnlaceBoton>
+          </div>
+        </Seccion>
+      )}
 
       <Seccion titulo="Demostración">
         <Link href="/demo" className="block rounded-2xl border border-naranja/40 bg-naranja/10 p-4 text-sm transition-colors hover:bg-naranja/15">

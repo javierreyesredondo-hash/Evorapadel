@@ -9,14 +9,17 @@ const enlaces = [
   { href: "/", texto: "Inicio", Icono: IconInicio },
   { href: "/jugadores", texto: "Jugadores", Icono: IconJugadores },
   { href: "/grupos", texto: "Grupos", Icono: IconGrupos },
-  { href: "/evaluaciones", texto: "Evaluar", Icono: IconEvaluaciones },
+  // Tareas de entrenamiento (también para el director que entrena): sus grupos y evaluaciones.
+  { href: "/entrenamiento", texto: "Entrenar", Icono: IconEvaluaciones, tambien: ["/evaluaciones"] },
   // Seguimiento de objetivos con progreso: solo en la demostración (datos ficticios).
   { href: "/demo", texto: "Demo", Icono: IconDemo },
 ] as const;
 
-function esActivo(pathname: string | null, href: string) {
+function esActivo(pathname: string | null, enlace: (typeof enlaces)[number]) {
   if (pathname === null) return false;
-  return href === "/" ? pathname === "/" : pathname.startsWith(href);
+  if (enlace.href === "/") return pathname === "/";
+  const prefijos: readonly string[] = [enlace.href, ...("tambien" in enlace ? enlace.tambien : [])];
+  return prefijos.some((p) => pathname.startsWith(p));
 }
 
 // usePathname() es dato de petición en rutas con parámetros dinámicos
@@ -43,8 +46,9 @@ function BarraInferior({ pathname }: { pathname: string | null }) {
       className="fixed inset-x-0 bottom-0 z-20 border-t border-noche-500 bg-noche/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
     >
       <ul className="mx-auto grid max-w-md grid-cols-5">
-        {enlaces.map(({ href, texto, Icono }) => {
-          const activo = esActivo(pathname, href);
+        {enlaces.map((enlace) => {
+          const { href, texto, Icono } = enlace;
+          const activo = esActivo(pathname, enlace);
           return (
             <li key={href}>
               <Link
@@ -78,8 +82,9 @@ function MenuLateral({ pathname }: { pathname: string | null }) {
   return (
     <nav aria-label="Principal" className="mt-8">
       <ul className="space-y-1">
-        {enlaces.map(({ href, texto, Icono }) => {
-          const activo = esActivo(pathname, href);
+        {enlaces.map((enlace) => {
+          const { href, texto, Icono } = enlace;
+          const activo = esActivo(pathname, enlace);
           return (
             <li key={href}>
               <Link

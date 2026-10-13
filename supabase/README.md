@@ -13,10 +13,10 @@
 | `tests/00_entorno_local.sql` | Simulación de Supabase para pruebas **locales** (roles, `auth`, `postgres` no superusuario). **Nunca** ejecutarlo en Supabase. |
 | `tests/05_antes_de_migrar.sql` | Prueba: un usuario se registra en Auth **antes** de aplicar las migraciones. |
 | `tests/10_aislamiento.sql` | 98 comprobaciones de aislamiento entre escuelas, permisos, estructura y alta de escuelas. |
-| `tests/20_evaluaciones.sql` | 68 comprobaciones de la migración 3: permisos por rol, aislamiento, validaciones, manipulación de identificadores, duplicados y borrados. |
+| `tests/20_evaluaciones.sql` | 75 comprobaciones de la migración 3: permisos por rol, aislamiento, validaciones, manipulación de identificadores, duplicados y borrados. |
 | `../scripts/probar-migracion.sh` | PostgreSQL local desechable: aplica la migración como `postgres` y ejecuta las pruebas (`npm run test:db`). |
 | `../scripts/probar-migracion-supabase.sh` | Lo mismo sobre la **imagen oficial** `supabase/postgres` en Docker (`npm run test:db:supabase`). |
-| `../scripts/probar-mutaciones.mjs` | Introduce 31 fallos de seguridad, uno a uno, y exige que las pruebas los detecten (`npm run test:db:mutaciones`). |
+| `../scripts/probar-mutaciones.mjs` | Introduce 34 fallos de seguridad, uno a uno, y exige que las pruebas los detecten (`npm run test:db:mutaciones`). |
 
 ## Modelo
 
@@ -238,6 +238,53 @@ Limitaciones conocidas (no requieren cambiar políticas):
   escuela»); falta un selector.
 - Los jugadores pueden ser menores: la app guarda solo las columnas del
   esquema (sin datos de contacto). Revisar el RGPD antes de cargar datos reales.
+
+## Roles: una persona puede dirigir y entrenar
+
+**Decisión de diseño (vigente para esta fase y las siguientes).**
+
+- Cada persona tiene **una cuenta** (Supabase Auth), **un perfil** y **una
+  membresía por escuela**. `membresias.rol` es su **nivel de permisos**:
+  - `director`: gestiona la escuela **y** puede hacer todo lo que hace un
+    entrenador;
+  - `entrenador`: tareas de entrenamiento.
+- **Entrenar no es un rol aparte, es una tarea**: estar asignado a grupos
+  (`grupos.entrenador_id`, que admite a cualquier miembro, también al director)
+  y ser autor de evaluaciones (`evaluaciones.entrenador_id = auth.uid()`).
+- Por eso el esquema actual ya representa al director que entrena, **sin
+  migración**. Se ha comprobado política por política: toda política que
+  admite `entrenador` admite también `director`, y ninguna está reservada solo
+  al rol `entrenador`.
+
+| Tarea | Entrenador/a | Director/a (también si entrena) |
+|---|---|---|
+| Entrenar grupos asignados, evaluar, editar sus evaluaciones | ✓ | ✓ |
+| Dar de alta y editar jugadores, asignarlos a grupos | ✓ | ✓ |
+| Crear y editar grupos, elegir su entrenador (incluido él mismo) | ✗ | ✓ |
+| Metodología, editar cualquier evaluación, borrar jugadores | ✗ | ✓ |
+
+En la app, las tareas se separan **sin cambiar de cuenta ni de sesión**: la
+pestaña «Entrenar» (`/entrenamiento`: sus grupos, sus jugadores y sus
+evaluaciones) y la sección «Dirección» del inicio (grupos y metodología). No hay
+un «modo» que cambie permisos: la dirección nunca se pierde al entrenar.
+
+Comprobado en `tests/20_evaluaciones.sql` (el director se asigna un grupo,
+asigna jugadores, evalúa como autor, edita su evaluación y conserva la
+dirección; una sola membresía) y con tres mutaciones que quitan al director
+funciones de entrenador (todas detectadas).
+
+**Reglas para el diseño futuro.**
+
+- Toda política nueva de una tarea de entrenamiento debe admitir
+  `array['director', 'entrenador']`, nunca solo `['entrenador']`.
+- Si en el futuro los entrenadores solo deben ver **sus** grupos y jugadores, la
+  condición será «es director **o** entrena ese grupo», nunca solo lo segundo.
+- Solo haría falta una migración si se quisiera algo que hoy no existe, por
+  ejemplo varios entrenadores por grupo (tabla `grupo_entrenadores`) o
+  permisos combinados distintos de director ⊇ entrenador (por ejemplo, un
+  coordinador sin funciones de entrenador). En ese caso habría que añadir una
+  tabla o columna nueva, conservar `membresias.rol` como nivel de permisos y
+  probar la migración con las mismas pruebas de aislamiento y mutación.
 
 ## Evaluaciones e informes (migración 3)
 

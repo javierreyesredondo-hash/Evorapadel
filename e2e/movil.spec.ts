@@ -14,6 +14,7 @@ const RUTAS: [string, RegExp][] = [
   ["/evaluaciones/nueva", /Datos reales de tu escuela/],
   ["/metodologia", /Datos reales de tu escuela/],
   ["/perfil", /Datos reales de tu escuela/],
+  ["/entrenamiento", /Datos reales de tu escuela/],
   ["/demo", /Modo demostración/],
   ["/demo/jugadores", /Modo demostración/],
   ["/demo/jugadores/j1", /Modo demostración/],
