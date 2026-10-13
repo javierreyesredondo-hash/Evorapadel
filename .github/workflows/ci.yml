@@ -1,0 +1,68 @@
+# Comprobaciones automáticas de ÉVORA PADEL en cada PR y en main.
+#
+# Seguridad:
+#   * Sin secretos ni variables de Supabase: nada aquí puede conectarse al
+#     proyecto de producción ni a ningún Supabase alojado.
+#   * Las pruebas de base de datos usan un PostgreSQL LOCAL y desechable del
+#     propio ejecutor (scripts/probar-migracion.sh), que se crea y se borra en
+#     cada ejecución. Las migraciones solo se aplican ahí.
+#   * Permisos del token de GitHub: solo lectura del repositorio.
+#
+# Las pruebas E2E (Docker con Supabase local) no se ejecutan aquí: npm run test:e2e en local.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  comprobaciones:
+    name: Lint, tipos, tests y base de datos
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Comprobación de tipos
+        run: npm run typecheck
+
+      - name: Tests unitarios
+        run: npm test
+
+      - name: Binarios de PostgreSQL (local, desechable)
+        run: |
+          if ! ls /usr/lib/postgresql/*/bin/initdb >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql
+          fi
+          echo "PG_BIN=$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -n 1)" >> "$GITHUB_ENV"
+
+      # Debe ir antes que las mutaciones: si PostgreSQL no arrancara, las
+      # mutaciones fallarían todas y parecerían «detectadas».
+      - name: Pruebas de base de datos (aislamiento y evaluaciones)
+        run: npm run test:db
+
+      - name: Mutaciones de seguridad
+        run: npm run test:db:mutaciones

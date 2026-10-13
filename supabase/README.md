@@ -1,7 +1,17 @@
 # Base de datos (Supabase) — ÉVORA PADEL
 
-> **Estado:** migraciones preparadas para revisión. **No se han ejecutado en ningún
-> proyecto de Supabase** y la aplicación todavía no se conecta a la base de datos.
+> **Estado (13/10/2026):** las migraciones **1, 2 y 3 se aplicaron a mano** (SQL
+> Editor) en el proyecto de producción `idzkjzpgijzwmtpumcwk`, y la app desplegada
+> en Vercel se conecta a él. Lo comprobó la escuela en el panel: existen las 10
+> tablas, `public.guardar_evaluacion` con `EXECUTE` para `authenticated` y RLS
+> activada en las 4 tablas de evaluaciones. **Sin verificar todavía en
+> producción**: el número exacto de políticas y permisos, que el registro público
+> esté desactivado y un guardado real de evaluación con su PDF (ver
+> «Verificación de solo lectura del proyecto»).
+>
+> ⚠️ **No ejecutar `supabase db push`** contra este proyecto: como las migraciones
+> se aplicaron a mano, la CLI no tiene su historial e intentaría ejecutarlas otra
+> vez. Ver «Migraciones aplicadas a mano y CLI de Supabase».
 
 ## Contenido
 
@@ -76,44 +86,40 @@ filtra por escuela en todo):
    en `tests/10_aislamiento.sql` (y una mutación que lo rompa en
    `scripts/probar-mutaciones.mjs`) antes de aplicar nada.
 
-### Verificación realizada (migraciones 1 y 2)
+### Verificación realizada (local, migraciones 1–3)
+
+Todo en PostgreSQL **local y desechable**; ninguna prueba toca Supabase alojado.
 
 | Entorno | Resultado |
 |---|---|
-| `supabase/postgres:15.19.0.004` (Docker), aplicadas como `postgres` | 98/98 |
-| `supabase/postgres:17.11.0.004` (Docker), aplicadas como `postgres` | 98/98 |
-| PostgreSQL 16 local con simulación de Supabase | 98/98 |
-| Mutaciones de seguridad | 18/18 detectadas |
-| Linter oficial de Supabase ([splinter](https://github.com/supabase/splinter), el del *Security Advisor*) sobre 15.19 | Sin avisos de seguridad; solo `unused_index` (base vacía) |
+| PostgreSQL 16 local con simulación de Supabase (`npm run test:db`, también en CI) | 98 + 75 = 173/173 |
+| `supabase/postgres:17.11.0.004` y `15.19.0.004` (Docker, `npm run test:db:supabase`) | 98 + 75 (fase de evaluaciones) |
+| Mutaciones de seguridad (`npm run test:db:mutaciones`, también en CI) | 34/34 detectadas |
+| Linter oficial de Supabase ([splinter](https://github.com/supabase/splinter), el del *Security Advisor*) sobre 15.19, migraciones 1 y 2 | Sin avisos de seguridad; solo `unused_index` (base vacía) |
 
-No verificado: un proyecto **alojado** en supabase.com (por decisión, no se ha
-ejecutado nada en Supabase). Por eso conviene `supabase db push --dry-run` y un
-proyecto de pruebas antes del definitivo.
+## Migraciones aplicadas a mano y CLI de Supabase
 
-## Cómo ejecutarla más adelante (cuando se decida)
+Las migraciones 1, 2 y 3 ya están aplicadas en producción (a mano, en el *SQL
+Editor*). **No se vuelven a ejecutar** ni se regeneran.
 
-> Recomendación: un **proyecto de Supabase nuevo** para ÉVORA PADEL, y probar
-> primero en un proyecto de pruebas (staging). El proyecto de la versión
-> anterior de la app puede contener tablas con nombres que choquen.
+- La tabla de historial de la CLI (`supabase_migrations.schema_migrations`) no
+  las tiene registradas. Por eso **`supabase db push` intentaría aplicarlas otra
+  vez** y fallaría a mitad (los objetos ya existen) o, peor, aplicaría parte.
+- Antes de usar la CLI con este proyecto hay que **reconciliar el historial**, una
+  sola vez y como decisión expresa (escribe en esa tabla de producción):
 
-Con la [CLI de Supabase](https://supabase.com/docs/guides/cli):
+  ```bash
+  supabase link --project-ref idzkjzpgijzwmtpumcwk
+  supabase migration list               # solo lectura: las 3 en «Local», con «Remote» vacío
+  supabase migration repair --status applied 20261012190000 20261013090000 20261014090000
+  supabase migration list               # ahora: aplicadas en local y en remoto
+  ```
 
-```bash
-supabase login
-supabase init                         # crea supabase/config.toml (sin secretos)
-supabase link --project-ref <ref-del-proyecto>
-supabase db push --dry-run            # muestra qué se aplicaría, sin aplicarlo
-supabase db push                      # aplica las migraciones pendientes
-```
-
-Alternativa manual: pegar cada migración **en orden** (primero la 1, después
-la 2) en el *SQL Editor*, cada una dentro de `begin; … commit;`, una sola vez.
-
-Después de aplicarla:
-
-1. *Advisors → Security Advisor* en el panel de Supabase: no debe haber avisos
-   de RLS desactivado ni de funciones sin `search_path`.
-2. Crear la primera escuela y su director (ver abajo).
+  Solo entonces `supabase db push --dry-run` debe decir que no hay nada
+  pendiente. Si dice otra cosa, **parar** y revisar.
+- Las migraciones futuras se prueban primero en local (`npm run test:db`,
+  `test:db:mutaciones`, `test:e2e`) y, a ser posible, en un proyecto de pruebas.
+  Nunca desde CI.
 
 ## Alta de la primera escuela y su director
 
@@ -154,45 +160,58 @@ La app usa `@supabase/ssr` con la URL y la clave **pública** (ver `.env.example
 3. *Authentication → Sign In / Providers*: **desactivar «Allow new users to sign
    up»**. La app no muestra registro, pero con la clave pública cualquiera podría
    llamar directamente a la API de registro de Supabase. Un usuario así no vería
-   ninguna escuela (RLS), pero conviene cerrarlo.
+   ninguna escuela (RLS), pero conviene cerrarlo. **Pendiente de confirmar** en
+   el proyecto de producción (consulta 5 de la verificación).
 4. *Authentication → URL Configuration*: *Site URL* con el dominio de la app.
 5. Los usuarios se crean en *Authentication → Users → Add user*, y su escuela
    y rol según «Alta de la primera escuela y su director».
 
-### Verificación obligatoria antes de usar el proyecto `idzkjzpgijzwmtpumcwk`
+### Verificación de solo lectura del proyecto `idzkjzpgijzwmtpumcwk`
 
-Desde el entorno de desarrollo **no se ha podido acceder** al proyecto alojado
-(red bloqueada y sin credenciales), así que su esquema **no está comprobado**.
-La app espera exactamente el de las migraciones de esta carpeta. En el *SQL
-Editor* (solo lectura):
+Desde el entorno de desarrollo **no se puede acceder** al proyecto alojado (red
+bloqueada y sin credenciales). La app espera exactamente el esquema de las
+migraciones de esta carpeta. Estas consultas solo leen (*SQL Editor*) y no
+devuelven datos personales:
 
 ```sql
-select table_name from information_schema.tables
- where table_schema = 'public' order by 1;
--- Esperado: escuelas, grupo_jugadores, grupos, jugadores, membresias, perfiles
+-- 1) Tablas. Esperado: 10 (competencias, escuelas, evaluacion_objetivos,
+--    evaluacion_puntuaciones, evaluaciones, grupo_jugadores, grupos,
+--    jugadores, membresias, perfiles), todas con rowsecurity = true.
+select tablename, rowsecurity from pg_tables where schemaname = 'public' order by 1;
 
-select column_name, data_type from information_schema.columns
- where table_schema = 'public' and table_name in ('escuelas', 'membresias', 'perfiles')
- order by table_name, ordinal_position;
+-- 2) Políticas. Esperado: 28 (16 de la migración 1 + 12 de la 3).
+--    Ninguna de borrado en competencias ni en evaluaciones: no se borran.
+select tablename, policyname, cmd from pg_policies where schemaname = 'public' order by 1, 2;
 
-select tablename, rowsecurity from pg_tables where schemaname = 'public';
--- rowsecurity = true en todas
+-- 3) Permiso DELETE de los clientes. Esperado: solo authenticated, en jugadores,
+--    grupos, grupo_jugadores, evaluacion_puntuaciones y evaluacion_objetivos.
+select table_name, grantee from information_schema.role_table_grants
+ where table_schema = 'public' and privilege_type = 'DELETE'
+   and grantee in ('anon', 'authenticated') order by 1, 2;
 
-select count(*) from public.membresias m join auth.users u on u.id = m.usuario_id;
+-- 4) Funciones. Esperado: definer = true solo en es_miembro, tiene_rol,
+--    comparte_escuela, crear_perfil y puede_editar_evaluacion; todas con search_path="".
+select n.nspname, p.proname, p.prosecdef as definer, p.proconfig
+  from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+ where n.nspname in ('public', 'privado') order by 1, 2;
+
+-- 5) Cuentas sin escuela (p. ej. por registro público abierto). Esperado: 0.
+select count(*) as usuarios_sin_membresia from auth.users u
+ where not exists (select 1 from public.membresias m where m.usuario_id = u.id);
 ```
 
-Si faltan tablas o columnas, hay tablas de la versión anterior de la app, o
-`membresias.rol` no admite `director`/`entrenador`: **no tocar la base de datos**
-y revisarlo antes. Si el esquema no coincide, la app muestra «No se ha podido
-cargar tu escuela» y lo registra en el servidor (`PGRST2xx` / `42P01`).
+Si algo no coincide: **no tocar la base de datos** y revisarlo antes. Si el
+esquema no coincide, la app muestra «No se ha podido cargar tu escuela» y lo
+registra en el servidor (`PGRST2xx` / `42P01`).
 
 ### Supabase local para las pruebas
 
 `npm run supabase:local` (Docker) levanta PostgreSQL 17 y Auth (GoTrue) de
 Supabase, PostgREST y una pasarela mínima en `127.0.0.1:54321` que imita las
-rutas de Kong (`/auth/v1`, `/rest/v1`). Aplica las dos migraciones y crea, con
-`privado.crear_escuela_con_director`, dos escuelas sintéticas y cuatro usuarios
-`@evora.invalid` (director A, entrenador A, director B y uno sin escuela). Las
+rutas de Kong (`/auth/v1`, `/rest/v1`). Aplica las tres migraciones y crea, con
+`privado.crear_escuela_con_director`, tres escuelas sintéticas (A y B con la
+metodología base, C sin competencias) y cinco usuarios `@evora.invalid`
+(director A, entrenador A, director B, director C y uno sin escuela). Las
 claves se generan en cada arranque y solo sirven en local. `npm run
 supabase:local:parar` lo detiene.
 
@@ -293,8 +312,9 @@ funciones de entrenador (todas detectadas).
 Las migraciones se aplican **en orden** y una sola vez: 1 → 2 → **3**
 (`20261014090000_evaluaciones.sql`). La 3 no cambia nada de las anteriores
 (solo añade tipos, tablas, funciones y políticas nuevas) y **no inserta datos**.
-Con la CLI: `supabase db push --dry-run` y después `supabase db push`. A mano:
-pegarla completa en el *SQL Editor* dentro de `begin; … commit;`.
+En producción **ya está aplicada** (a mano); no repetirla. Para un proyecto
+nuevo: pegar cada migración completa en el *SQL Editor* dentro de
+`begin; … commit;`, o usar la CLI en un proyecto con el historial al día.
 
 Después de aplicarla:
 
@@ -354,8 +374,10 @@ Integridad en la base de datos (no depende de la interfaz):
 
 - Base legal y consentimiento de las familias para evaluar y generar
   informes de menores; información sobre el tratamiento.
-- Plazo de conservación de evaluaciones y procedimiento de supresión (hoy
-  solo la dirección puede borrar jugadores, y eso borra sus evaluaciones).
+- Plazo de conservación de evaluaciones y procedimiento de supresión. Hoy la
+  app solo archiva: no borra jugadores ni evaluaciones. La base de datos
+  permite a la dirección borrar un jugador (y con él sus evaluaciones), pero
+  solo por SQL. Una función de borrado en la app se diseñará aparte.
 - Revisar quién puede ver qué: hoy cualquier miembro de la escuela ve todas
   sus evaluaciones (como con los jugadores).
 - Los PDF compartidos por WhatsApp salen del control de la app: recordar a

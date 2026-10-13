@@ -114,7 +114,7 @@ test.describe("Evaluaciones", () => {
 
     // Vuelve a la ficha con la nueva evaluación como la última.
     await expect(page).toHaveURL(/\/jugadores\/j5$/);
-    await expect(page.getByRole("status")).toHaveText("Evaluación guardada");
+    await expect(page.getByRole("status")).toHaveText("Evaluación guardada en la demo (solo en este navegador)");
     await expect(page.getByText("Media 3,8")).toBeVisible();
     await expect(page.getByText("«Buena sesión de prueba.»")).toBeVisible();
     await expect(page.getByRole("list", { name: "Historial de evaluaciones" }).getByRole("listitem")).toHaveCount(3);
@@ -174,7 +174,7 @@ test.describe("Objetivos", () => {
     await page.getByRole("button", { name: "Crear objetivo" }).click();
 
     await expect(page).toHaveURL(/\/jugadores\/j4$/);
-    await expect(page.getByRole("status")).toHaveText("Objetivo creado");
+    await expect(page.getByRole("status")).toHaveText("Objetivo creado en la demo (solo en este navegador)");
     const lista = page.getByRole("list", { name: "Objetivos del jugador" });
     const fila = lista.getByRole("listitem").filter({ hasText: "Globos al fondo de pista" });
     await expect(fila).toContainText("1 de 3");

@@ -92,9 +92,11 @@ async function Inicio() {
 
       <Seccion titulo="Demostración">
         <Link href="/demo" className="block rounded-2xl border border-naranja/40 bg-naranja/10 p-4 text-sm transition-colors hover:bg-naranja/15">
-          <p className="font-bold text-naranja">Evaluaciones y objetivos (datos ficticios)</p>
+          <p className="font-bold text-naranja">Seguimiento de objetivos con progreso (demostración)</p>
           <p className="mt-1 text-blanco/80">
-            Prueba cómo funcionarán con jugadores inventados. No se mezclan con los datos reales.
+            Todavía no está en la versión real. Se prueba con jugadores inventados y lo que hagas allí se
+            guarda solo en este navegador: no forma parte de tu escuela. Tus evaluaciones reales están en
+            «Entrenar» y en la ficha de cada jugador.
           </p>
         </Link>
       </Seccion>

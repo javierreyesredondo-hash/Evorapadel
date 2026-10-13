@@ -35,7 +35,7 @@ function FormularioObjetivo() {
       return;
     }
     despachar({ tipo: "crearObjetivo", objetivo: r.valor });
-    mostrarAviso("Objetivo creado");
+    mostrarAviso("Objetivo creado en la demo (solo en este navegador)");
     router.push(`/demo/jugadores/${jugadorId}`);
   }
 
