@@ -5,7 +5,7 @@ import { useActionState, useRef, useState } from "react";
 import { actualizarGrupo, crearGrupo, type EstadoFormulario } from "@/app/acciones-gestion";
 import { LIMITES, nombreMiembro, type GrupoReal, type Miembro } from "@/lib/gestion";
 import { claseBoton } from "@/components/ui";
-import { Campo, claseCampo } from "@/components/formularios/campos";
+import { Campo, claseCampo } from "@/components/campos";
 import { useTrasGuardar } from "@/components/gestion/useTrasGuardar";
 
 type Props = { grupo?: GrupoReal; miembros: Miembro[]; usuarioId: string };

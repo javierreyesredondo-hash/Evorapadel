@@ -9,10 +9,9 @@ Plataforma internacional de metodología y desarrollo de jugadores de pádel.
 La app exige **iniciar sesión** (correo y contraseña de Supabase Auth) y
 trabaja con la escuela del usuario, leída de su membresía en el servidor.
 
-| Modo | Rutas | Datos |
-|---|---|---|
-| **Datos reales** (indicador verde) | `/`, `/jugadores…`, `/grupos…`, `/entrenamiento`, `/evaluaciones…`, `/metodologia`, `/perfil` | Supabase, con RLS |
-| **Demostración** (aviso naranja) | `/demo…` | Ficticios, solo en el `localStorage` del navegador |
+Todas las pantallas (`/`, `/jugadores…`, `/grupos…`, `/entrenamiento`,
+`/evaluaciones…`, `/metodologia`, `/perfil`) trabajan con **datos reales** de
+Supabase, protegidos con RLS. No hay apartado de demostración ni datos ficticios.
 
 - **Roles:** una misma persona puede **dirigir y entrenar** con una sola cuenta y
   sesión. «Entrenar» (`/entrenamiento`) reúne sus grupos, jugadores y
@@ -27,8 +26,9 @@ trabaja con la escuela del usuario, leída de su membresía en el servidor.
   evaluación anterior del mismo tipo (solo en competencias comunes).
 - **Informe PDF** por evaluación: vista previa, descarga y compartir desde el
   menú del móvil (WhatsApp). Se genera con los datos guardados; no se almacena.
-- El seguimiento de objetivos con progreso sigue solo en la demostración. Los
-  datos ficticios nunca se suben a Supabase ni se mezclan con los reales.
+- El seguimiento de objetivos con progreso todavía no existe con datos reales
+  (la antigua demostración se retiró); los objetivos con plazo forman parte de
+  cada evaluación.
 
 Detalle de permisos y decisiones: `supabase/README.md` (Fase 4 y migración 3).
 
@@ -52,25 +52,11 @@ en Supabase. No ejecutar `supabase db push` sin reconciliar antes el historial
   `src/app/acciones-gestion.ts`; la escuela nunca viene del formulario.
 - Variables de entorno: ver `.env.example`.
 
-### Demostración con datos ficticios (Fase 2, en `/demo`)
+### 404
 
-- Búsqueda (sin distinguir tildes) y filtros por nivel y posición.
-- Ficha de cada jugador: datos, última evaluación por criterio, objetivos e historial.
-- Formulario de evaluación: seis criterios con notas enteras de 1 a 5.
-- Creación de objetivos individuales y actualización de su progreso.
-
-**Puntuación:** cada criterio se puntúa con un entero de 1 a 5. La puntuación
-global es `round(media exacta × 20)`, con rango **20–100** (nota 1 → 20, nota 5 → 100).
-La media se muestra con un decimal; ver `src/lib/dominio.ts`.
-
-**404:** `src/proxy.ts` devuelve un 404 real para fichas de jugadores que no
-existen (con Cache Components, `notFound()` en la página llegaba tarde y el
-código era 200).
-
-Los cambios se guardan solo en el `localStorage` del navegador
-(`src/lib/almacen.tsx`) y se pueden deshacer con «Restablecer». Lo guardado se
-valida por completo al cargar; si algo no es válido, se descarta y se vuelve a
-los datos iniciales.
+`src/proxy.ts` devuelve un 404 real para fichas con un identificador imposible
+(con Cache Components, `notFound()` en la página llegaba tarde y el código era
+200). Ver `src/lib/rutas.ts`.
 
 ## Desarrollo
 
@@ -85,7 +71,7 @@ npm run test:db    # migración SQL en un PostgreSQL local desechable
 npm run test:db:supabase    # misma prueba con la imagen oficial de Supabase (Docker)
 npm run test:db:mutaciones  # comprueba que las pruebas detectan fallos de seguridad (34)
 npm run supabase:local        # Supabase local (Docker) con usuarios y escuelas de prueba
-npm run test:e2e   # compila y prueba acceso, RLS, jugadores/grupos, evaluaciones, PDF, roles y demo en Chromium (móvil y escritorio)
+npm run test:e2e   # compila y prueba acceso, RLS, jugadores/grupos, evaluaciones, PDF, roles y móvil en Chromium (móvil y escritorio)
 npm run supabase:local:parar  # detiene el Supabase local
 npm run build
 ```

@@ -21,7 +21,7 @@ test.describe("Sin sesión", () => {
     await expect(page).toHaveURL(/\/acceso$/);
     await expect(page.getByRole("heading", { name: "Iniciar sesión" })).toBeVisible();
 
-    for (const ruta of ["/jugadores", "/grupos", "/demo/jugadores/j1", "/demo/evaluaciones/nueva?pendiente=e1", "/demo/objetivos"]) {
+    for (const ruta of ["/jugadores", "/grupos", "/evaluaciones/nueva?tipo=completa", "/metodologia", "/entrenamiento"]) {
       await page.goto(ruta);
       await expect(page).toHaveURL(new RegExp(`/acceso\\?siguiente=${encodeURIComponent(ruta).replace(/[?.]/g, "\\$&")}$`));
     }
@@ -37,7 +37,7 @@ test.describe("Sin sesión", () => {
     const r = await request.get("/jugadores", { maxRedirects: 0 });
     expect(r.status()).toBe(307);
     expect(r.headers()["location"]).toMatch(/^\/acceso\?siguiente=%2Fjugadores$/);
-    expect(await r.text()).not.toContain("Lucía Marván");
+    expect(await r.text()).not.toContain("Escuela Demo A");
   });
 });
 
@@ -79,9 +79,8 @@ test.describe("Con sesión: escuela y rol desde la base de datos (RLS)", () => {
     await expect(barraEscuela(page)).toContainText("Escuela Demo A");
     await expect(barraEscuela(page)).toContainText("Director/a");
     await expect(page.getByText("Escuela Demo B")).toHaveCount(0);
-    // Inicio con datos reales; la demo (ficticia) está aparte, en /demo.
-    await expect(page.getByText(/Datos reales de tu escuela/)).toBeVisible();
-    await expect(page.getByText(/Modo demostración/)).toHaveCount(0);
+    // Solo funciones reales: no hay apartado de demostración.
+    await expect(page.getByRole("link", { name: "Demo", exact: true })).toHaveCount(0);
   });
 
   test("entrenador de A: rol entrenador", async ({ page }) => {
@@ -100,20 +99,17 @@ test.describe("Con sesión: escuela y rol desde la base de datos (RLS)", () => {
     await entrar(page, "SIN_ESCUELA");
     await expect(page.getByRole("heading", { name: "Tu cuenta no tiene escuela" })).toBeVisible();
     await expect(barraEscuela(page)).toHaveCount(0);
-    await expect(page.getByText(/Modo demostración/)).toHaveCount(0);
-    await expect(page.getByText(/Datos reales de tu escuela/)).toHaveCount(0);
-    await expect(page.getByText("Hola, entrenador")).toHaveCount(0);
   });
 
   test("tras entrar vuelve a la página pedida", async ({ page }) => {
-    await page.goto("/demo/jugadores/j1");
+    await page.goto("/grupos");
     await expect(page).toHaveURL(/siguiente=/);
     const { email, contrasena } = credenciales("DIRECTOR_A");
     await page.getByLabel("Correo electrónico").fill(email);
     await page.getByLabel("Contraseña").fill(contrasena);
     await page.getByRole("button", { name: "Entrar" }).click();
-    await expect(page).toHaveURL(/\/demo\/jugadores\/j1$/);
-    await expect(page.getByRole("heading", { level: 1, name: "Lucía Marván" })).toBeVisible();
+    await expect(page).toHaveURL(/\/grupos$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Grupos" })).toBeVisible();
   });
 
   test("no hay redirección abierta a otros dominios", async ({ page }) => {
@@ -130,8 +126,8 @@ test.describe("Con sesión: escuela y rol desde la base de datos (RLS)", () => {
 
     await barraEscuela(page).getByRole("button", { name: "Cerrar sesión" }).click();
     await expect(page).toHaveURL(/\/acceso$/);
-    await page.goto("/demo/objetivos");
-    await expect(page).toHaveURL(/\/acceso\?siguiente=%2Fdemo%2Fobjetivos$/);
+    await page.goto("/jugadores");
+    await expect(page).toHaveURL(/\/acceso\?siguiente=%2Fjugadores$/);
   });
 
   test("las cookies de sesión son de Supabase y no contienen la contraseña", async ({ page, context }) => {

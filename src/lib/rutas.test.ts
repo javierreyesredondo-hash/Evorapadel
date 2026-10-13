@@ -17,15 +17,8 @@ test("idDeRuta no lanza con codificación inválida (regresión: daba 500)", () 
   assert.equal(idDeRuta("/jugadores/%", "/jugadores/"), null);
 });
 
-test("demo: solo existen las fichas de los jugadores ficticios, tal cual", () => {
-  for (const id of ["j1", "j2", "j3", "j4", "j5", "j6"]) assert.deepEqual(decidirRuta(`/demo/jugadores/${id}`), { tipo: "seguir" }, id);
-  for (const id of ["no-existe", "J1", "j1%20", "j7", UUID, "%E0%A4%A", "%"]) {
-    assert.deepEqual(decidirRuta(`/demo/jugadores/${id}`), { tipo: "no-encontrado" }, id);
-  }
-});
-
-test("enlaces antiguos de la demo (/jugadores/j1) van a /demo", () => {
-  assert.deepEqual(decidirRuta("/jugadores/j3"), { tipo: "redirigir", destino: "/demo/jugadores/j3" });
+test("la demostración ya no existe: sus antiguas fichas (/jugadores/j1) dan 404", () => {
+  for (const id of ["j1", "j3", "j6"]) assert.deepEqual(decidirRuta(`/jugadores/${id}`), { tipo: "no-encontrado" }, id);
 });
 
 test("fichas reales: UUID o «nuevo»; lo demás es 404 sin consultar la base de datos", () => {

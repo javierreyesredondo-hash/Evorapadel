@@ -1,12 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // El seguimiento de objetivos con progreso solo existe en la demostración.
-  // Temporal: cuando se conecte a la base de datos volverá a esta ruta.
-  // (/evaluaciones ya es real desde la fase de evaluaciones.)
-  async redirects() {
-    return [{ source: "/objetivos/:ruta*", destination: "/demo/objetivos/:ruta*", permanent: false }];
-  },
   // Fuentes del informe PDF (se leen del disco al generarlo): que viajen con la función en Vercel.
   outputFileTracingIncludes: {
     "/evaluaciones/*/pdf": [

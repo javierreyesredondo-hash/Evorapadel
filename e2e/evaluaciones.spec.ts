@@ -395,18 +395,3 @@ test.describe("Metodología", () => {
     await expect(page.getByRole("button", { name: "Añadir competencia" })).toHaveCount(0);
   });
 });
-
-test.describe("Demostración separada", () => {
-  test("la demo de evaluaciones sigue aislada de los datos reales", async ({ page }) => {
-    await entrar(page, "DIRECTOR_A");
-    await page.goto("/evaluaciones");
-    await expect(visible(page, /^Datos reales de tu escuela\.$/)).toBeVisible();
-    expect(await page.evaluate(() => window.localStorage.getItem("evora-padel-demo-v1"))).toBeNull();
-    await page.goto("/demo/evaluaciones");
-    await expect(visible(page, /Modo demostración/)).toBeVisible();
-    await expect(visible(page, "Irene Solana").first()).toBeVisible();
-    // Enlace antiguo de la demo: ahora abre el formulario real, sin romperse.
-    await page.goto("/evaluaciones/nueva?pendiente=e1");
-    await expect(page.getByRole("heading", { level: 1, name: "Nueva evaluación" })).toBeVisible();
-  });
-});

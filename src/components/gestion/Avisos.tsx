@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 
 // Confirmaciones breves («Jugador creado», «Cambios guardados») de las
 // pantallas con datos reales. Vive en el layout privado, así que sobrevive a la
-// navegación que sigue a un guardado. La demo tiene las suyas (almacen.tsx).
+// navegación que sigue a un guardado.
 
 type Valor = { avisar: (mensaje: string) => void };
 const Contexto = createContext<Valor | null>(null);

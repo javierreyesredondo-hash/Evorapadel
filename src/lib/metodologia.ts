@@ -3,8 +3,7 @@
 // La escala 1–5 es fija (requisito del producto y CHECK de la base de datos).
 // Las competencias NO son fijas: cada escuela tiene las suyas en la tabla
 // public.competencias y la dirección las puede cambiar. METODOLOGIA_BASE es solo
-// una propuesta inicial que la dirección puede cargar con un botón (son los
-// mismos criterios que usa la demostración).
+// una propuesta inicial que la dirección puede cargar con un botón.
 
 export type AreaCompetencia = "tecnica" | "tactica" | "fisica" | "mental";
 

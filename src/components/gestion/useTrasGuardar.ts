@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useEffectEvent, useRef, type RefObject } from "react";
 import type { EstadoFormulario } from "@/app/acciones-gestion";
-import { enfocarPrimerError } from "@/components/formularios/campos";
+import { enfocarPrimerError } from "@/components/campos";
 import { useAvisos } from "@/components/gestion/Avisos";
 
 /**
