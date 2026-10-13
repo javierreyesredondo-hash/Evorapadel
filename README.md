@@ -32,6 +32,10 @@ trabaja con la escuela del usuario, leída de su membresía en el servidor.
 
 Detalle de permisos y decisiones: `supabase/README.md` (Fase 4 y migración 3).
 
+**Base de datos en producción:** las migraciones 1, 2 y 3 están aplicadas a mano
+en Supabase. No ejecutar `supabase db push` sin reconciliar antes el historial
+(ver `supabase/README.md` → «Migraciones aplicadas a mano y CLI de Supabase»).
+
 ### Sesión y acceso
 
 - `src/proxy.ts` refresca la sesión en cada petición y redirige a `/acceso`
@@ -81,15 +85,20 @@ npm run test:db    # migración SQL en un PostgreSQL local desechable
 npm run test:db:supabase    # misma prueba con la imagen oficial de Supabase (Docker)
 npm run test:db:mutaciones  # comprueba que las pruebas detectan fallos de seguridad (34)
 npm run supabase:local        # Supabase local (Docker) con usuarios y escuelas de prueba
-npm run test:e2e   # compila y prueba acceso, RLS, jugadores/grupos y demo en Chromium (móvil y escritorio)
+npm run test:e2e   # compila y prueba acceso, RLS, jugadores/grupos, evaluaciones, PDF, roles y demo en Chromium (móvil y escritorio)
 npm run supabase:local:parar  # detiene el Supabase local
 npm run build
 ```
 
 `npm run supabase:local` levanta PostgreSQL y Auth de Supabase en Docker,
 PostgREST y una pasarela mínima, aplica las migraciones de `supabase/` y crea
-datos **sintéticos** (dos escuelas «Demo», usuarios `@evora.invalid`). Escribe
+datos **sintéticos** (tres escuelas «Demo», usuarios `@evora.invalid`). Escribe
 `.env.e2e.local` (ignorado por git), que usa `npm run test:e2e`.
+
+**Integración continua** (`.github/workflows/ci.yml`): en cada PR y en `main`,
+GitHub Actions ejecuta `lint`, `typecheck`, `test`, `test:db` y
+`test:db:mutaciones` sobre un PostgreSQL desechable del propio ejecutor. No usa
+secretos ni se conecta a Supabase. Las E2E (Docker) se ejecutan en local.
 
 Stack: Next.js (App Router) · TypeScript · Tailwind CSS · Supabase (`@supabase/ssr`) ·
 `pdf-lib` para los informes, con las fuentes de la marca de `@fontsource` (Barlow

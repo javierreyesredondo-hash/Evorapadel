@@ -308,6 +308,11 @@ test.describe("Demostración separada", () => {
     await page.goto("/jugadores");
     await expect(visible(page, "Lucía Marván")).toHaveCount(0);
 
+    // El inicio real solo presenta como demostración lo que sigue siéndolo.
+    await page.goto("/");
+    await expect(visible(page, "Seguimiento de objetivos con progreso (demostración)")).toBeVisible();
+    await expect(visible(page, /Evaluaciones y objetivos \(datos ficticios\)/)).toHaveCount(0);
+
     // La demo muestra sus jugadores ficticios, no los reales, y lo indica.
     await page.goto("/demo/jugadores");
     await expect(visible(page, /Modo demostración/)).toBeVisible();

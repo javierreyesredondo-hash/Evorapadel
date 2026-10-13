@@ -64,7 +64,7 @@ function FormularioEvaluacion() {
     // Solo cuenta como la pendiente si es del mismo jugador.
     const pendienteId = pendiente && pendiente.jugadorId === jugadorId ? pendiente.id : undefined;
     despachar({ tipo: "registrarEvaluacion", evaluacion: r.valor, pendienteId });
-    mostrarAviso("Evaluación guardada");
+    mostrarAviso("Evaluación guardada en la demo (solo en este navegador)");
     router.push(`/demo/jugadores/${jugadorId}`);
   }
 
