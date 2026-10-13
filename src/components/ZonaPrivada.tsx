@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { NOMBRE_ROL, RUTA_ACCESO, RUTA_SALIR, type Membresia } from "@/lib/acceso";
@@ -54,7 +55,9 @@ function BarraEscuela({ membresia, otras, nombre }: { membresia: Membresia; otra
       aria-label="Tu escuela"
       className="mb-4 flex items-center justify-between gap-3 rounded-2xl bg-noche-700 px-4 py-3 ring-1 ring-noche-500"
     >
-      <div className="min-w-0">
+      {/* Lleva al perfil (nombre visible que aparece en los informes). */}
+      <Link href="/perfil" className="block min-h-11 min-w-0 rounded-xl hover:bg-noche-600">
+        <span className="sr-only">Tu perfil: </span>
         <p className="truncate font-semibold" data-prueba="escuela">
           {membresia.escuelaNombre}
         </p>
@@ -65,7 +68,7 @@ function BarraEscuela({ membresia, otras, nombre }: { membresia: Membresia; otra
           {nombre && <> · {nombre}</>}
           {otras > 0 && <> · y {otras} {otras === 1 ? "escuela más" : "escuelas más"}</>}
         </p>
-      </div>
+      </Link>
       <BotonSalir compacto />
     </section>
   );

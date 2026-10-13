@@ -117,6 +117,25 @@ export async function obtenerGrupo(ctx: ContextoEscuela, id: string): Promise<Re
   return { ok: true, datos: data ? normalizarGrupo(data as Record<string, unknown>) : null };
 }
 
+/**
+ * Grupos que entrena el usuario actual (grupos.entrenador_id = su id, sacado
+ * de la sesión verificada). Vale igual para un entrenador que para un director
+ * que también entrena: entrenar es una tarea, no un rol aparte.
+ */
+export async function listarMisGrupos(ctx: ContextoEscuela): Promise<Resultado<GrupoReal[]>> {
+  const { data, error } = await ctx.supabase
+    .from("grupos")
+    .select(SELECT_GRUPO)
+    .eq("escuela_id", ctx.escuelaId)
+    .eq("entrenador_id", ctx.usuarioId)
+    .order("nombre");
+  if (error) {
+    registrar("mis grupos", error);
+    return { ok: false, mensaje: ERROR_LECTURA };
+  }
+  return { ok: true, datos: (data ?? []).map((f) => normalizarGrupo(f as Record<string, unknown>)) };
+}
+
 /** Miembros de la escuela activa (posibles entrenadores de un grupo). */
 export async function listarMiembros(ctx: ContextoEscuela): Promise<Resultado<Miembro[]>> {
   const { data, error } = await ctx.supabase

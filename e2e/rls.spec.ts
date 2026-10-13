@@ -148,3 +148,61 @@ test("nombre de grupo único por escuela (sin distinguir mayúsculas)", async ()
   const enB = await b.from("grupos").insert({ escuela_id: await escuelaDe(b), nombre: data!.nombre });
   expect(enB.error).toBeNull();
 });
+
+// ---------------------------------------------------------------------------
+// Evaluaciones (por la API, como la app)
+// ---------------------------------------------------------------------------
+
+async function evaluacionDeA() {
+  const a = await datosDeA();
+  const { data: comp } = await a.sb.from("competencias").select("id").eq("activa", true).limit(1).single();
+  const { data: id, error } = await a.sb.rpc("guardar_evaluacion", {
+    p_escuela: a.escuela, p_id: null, p_clave_envio: crypto.randomUUID(), p_jugador: a.jugadorId, p_grupo: null,
+    p_tipo: "rapida", p_fecha: new Date().toISOString().slice(0, 10), p_titulo: null, p_fortalezas: null, p_mejoras: null,
+    p_observaciones: "RLS secreta", p_puntuaciones: [{ competencia: comp!.id, puntuacion: 3 }], p_objetivos: [],
+  });
+  expect(error).toBeNull();
+  return { ...a, evaluacionId: id as string, competenciaId: comp!.id as string };
+}
+
+test("evaluaciones: el director de B no las lee ni las modifica, ni con la función de guardado", async () => {
+  const a = await evaluacionDeA();
+  const b = await como("DIRECTOR_B");
+  expect((await b.from("evaluaciones").select("id").eq("id", a.evaluacionId)).data).toEqual([]);
+  expect((await b.from("evaluacion_puntuaciones").select("puntuacion").eq("evaluacion_id", a.evaluacionId)).data).toEqual([]);
+  expect((await b.from("evaluaciones").update({ observaciones: "Hackeada" }).eq("id", a.evaluacionId).select("id")).data).toEqual([]);
+  const editar = await b.rpc("guardar_evaluacion", {
+    p_escuela: a.escuela, p_id: a.evaluacionId, p_clave_envio: null, p_jugador: null, p_grupo: null, p_tipo: "rapida",
+    p_fecha: new Date().toISOString().slice(0, 10), p_titulo: null, p_fortalezas: null, p_mejoras: null, p_observaciones: "Hackeada",
+    p_puntuaciones: [{ competencia: a.competenciaId, puntuacion: 1 }], p_objetivos: [],
+  });
+  expect(editar.error?.code).toBe("P0002");
+  const crear = await b.rpc("guardar_evaluacion", {
+    p_escuela: a.escuela, p_id: null, p_clave_envio: crypto.randomUUID(), p_jugador: a.jugadorId, p_grupo: null, p_tipo: "rapida",
+    p_fecha: new Date().toISOString().slice(0, 10), p_titulo: null, p_fortalezas: null, p_mejoras: null, p_observaciones: null,
+    p_puntuaciones: [{ competencia: a.competenciaId, puntuacion: 1 }], p_objetivos: [],
+  });
+  expect(crear.error?.code).toBe("42501");
+  expect((await b.from("evaluaciones").delete().eq("id", a.evaluacionId)).error?.code).toBe("42501");
+  const { data } = await a.sb.from("evaluaciones").select("observaciones").eq("id", a.evaluacionId).single();
+  expect(data!.observaciones).toBe("RLS secreta");
+});
+
+test("evaluaciones: sin sesión no se leen ni se guardan", async () => {
+  const { url, clave } = configSupabaseLocal();
+  const anon = createClient(url, clave, { auth: { persistSession: false } });
+  expect((await anon.from("evaluaciones").select("id")).error?.code).toBe("42501");
+  expect((await anon.rpc("guardar_evaluacion", {
+    p_escuela: crypto.randomUUID(), p_id: null, p_clave_envio: crypto.randomUUID(), p_jugador: crypto.randomUUID(), p_grupo: null,
+    p_tipo: "rapida", p_fecha: "2026-01-01", p_titulo: null, p_fortalezas: null, p_mejoras: null, p_observaciones: null,
+    p_puntuaciones: [], p_objetivos: [],
+  })).error?.code).toBe("42501");
+});
+
+test("metodología: el entrenador no crea ni cambia competencias", async () => {
+  const sb = await como("ENTRENADOR_A");
+  const { data: esc } = await sb.from("escuelas").select("id").single();
+  expect((await sb.from("competencias").insert({ escuela_id: esc!.id, nombre: `Intrusa ${unico()}`, area: "tecnica" })).error?.code).toBe("42501");
+  const { data: c } = await sb.from("competencias").select("id").limit(1).single();
+  expect((await sb.from("competencias").update({ activa: false }).eq("id", c!.id).select("id")).data).toEqual([]);
+});

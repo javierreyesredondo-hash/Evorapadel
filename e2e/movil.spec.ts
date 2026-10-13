@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
+import { clienteComo, unico } from "./credenciales";
 
 /** Pantallas con datos reales (Supabase) y de la demostración (ficticias). */
 const RUTAS: [string, RegExp][] = [
@@ -9,6 +10,11 @@ const RUTAS: [string, RegExp][] = [
   ["/jugadores/nuevo", /Datos reales de tu escuela/],
   ["/grupos", /Datos reales de tu escuela/],
   ["/grupos/nuevo", /Datos reales de tu escuela/],
+  ["/evaluaciones", /Datos reales de tu escuela/],
+  ["/evaluaciones/nueva", /Datos reales de tu escuela/],
+  ["/metodologia", /Datos reales de tu escuela/],
+  ["/perfil", /Datos reales de tu escuela/],
+  ["/entrenamiento", /Datos reales de tu escuela/],
   ["/demo", /Modo demostración/],
   ["/demo/jugadores", /Modo demostración/],
   ["/demo/jugadores/j1", /Modo demostración/],
@@ -161,6 +167,33 @@ test.describe("Experiencia móvil @movil", () => {
     await barra.getByRole("link", { name: "Demo" }).tap();
     await expect(page).toHaveURL(/\/demo$/);
     await expect(barra.getByRole("link", { name: "Demo" })).toHaveAttribute("aria-current", "page");
+  });
+});
+
+test.describe("Evaluación e informe en el móvil @movil", () => {
+  test("detalle, edición e informe: caben, controles táctiles y accesibilidad", async ({ page }) => {
+    // Evaluación sintética del director A (misma sesión que estas pruebas).
+    const sb = await clienteComo("DIRECTOR_A");
+    const { data: esc } = await sb.from("escuelas").select("id").single();
+    const { data: jugador } = await sb.from("jugadores").insert({ escuela_id: esc!.id, nombre: `Móvil ${unico()}` }).select("id").single();
+    const { data: comps } = await sb.from("competencias").select("id").eq("activa", true).order("orden");
+    const { data: id } = await sb.rpc("guardar_evaluacion", {
+      p_escuela: esc!.id, p_id: null, p_clave_envio: crypto.randomUUID(), p_jugador: jugador!.id, p_grupo: null,
+      p_tipo: "completa", p_fecha: new Date().toISOString().slice(0, 10), p_titulo: "Trimestral", p_fortalezas: "Constancia",
+      p_mejoras: "Volea", p_observaciones: "Observación larga ".repeat(40), p_puntuaciones: comps!.map((c, i) => ({ competencia: c.id, puntuacion: (i % 5) + 1 })),
+      p_objetivos: [{ descripcion: "Objetivo de prueba", plazo: null }],
+    });
+    for (const ruta of [`/evaluaciones/${id}`, `/evaluaciones/${id}/editar`, `/evaluaciones/${id}/informe`, `/jugadores/${jugador!.id}`]) {
+      await page.goto(ruta);
+      await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+      if (ruta.endsWith("/informe")) await expect(page.getByText("PDF listo.").filter({ visible: true })).toBeVisible();
+      await sinDesbordamiento(page);
+      expect(await controlesPequenos(page), `controles por debajo de 44 px en ${ruta}`).toEqual([]);
+      await sinInfraccionesAxe(page, ruta);
+    }
+    // En el formulario, la barra inferior no tapa «Guardar cambios».
+    await page.goto(`/evaluaciones/${id}/editar`);
+    await noTapado(page, "Guardar cambios");
   });
 });
 

@@ -1,5 +1,5 @@
 // Credenciales de los usuarios SINTÉTICOS del Supabase local (.env.e2e.local).
-export type UsuarioPrueba = "DIRECTOR_A" | "ENTRENADOR_A" | "DIRECTOR_B" | "SIN_ESCUELA";
+export type UsuarioPrueba = "DIRECTOR_A" | "ENTRENADOR_A" | "DIRECTOR_B" | "DIRECTOR_C" | "SIN_ESCUELA";
 
 export function credenciales(usuario: UsuarioPrueba) {
   const email = process.env[`E2E_EMAIL_${usuario}`];

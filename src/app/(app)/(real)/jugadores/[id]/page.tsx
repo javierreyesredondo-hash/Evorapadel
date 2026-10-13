@@ -4,6 +4,8 @@ import { Suspense } from "react";
 import { hoyIso, textoFecha } from "@/lib/format";
 import { edad, MANO_TEXTO, NIVEL_TEXTO, POSICION_TEXTO } from "@/lib/gestion";
 import { contextoEscuela, listarGrupos, obtenerJugador } from "@/lib/supabase/gestion";
+import { listarCompetencias, listarEvaluacionesJugador } from "@/lib/supabase/evaluaciones";
+import { ListaEvaluaciones } from "@/components/evaluaciones/ListaEvaluaciones";
 import { Avatar, EnlaceBoton, Lista, Seccion, Vacio } from "@/components/ui";
 import { Asignar, BotonEstadoJugador, BotonQuitar } from "@/components/gestion/Acciones";
 import { Cargando, Datos, ErrorCarga, NoEncontrado } from "@/components/gestion/Estados";
@@ -22,7 +24,13 @@ async function Ficha({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const ctx = await contextoEscuela();
   if (!ctx) return <ErrorCarga />;
-  const [r, grupos] = await Promise.all([obtenerJugador(ctx, id), listarGrupos(ctx)]);
+  const [r, grupos, evaluaciones, competencias] = await Promise.all([
+    obtenerJugador(ctx, id),
+    listarGrupos(ctx),
+    listarEvaluacionesJugador(ctx, id),
+    listarCompetencias(ctx),
+  ]);
+  const hayMetodologia = competencias.ok && competencias.datos.some((c) => c.activa);
   if (!r.ok) return <ErrorCarga mensaje={r.mensaje} />;
   const j = r.datos;
   if (!j) return <NoEncontrado titulo="Jugador no encontrado" volver={{ href: "/jugadores", texto: "Ver jugadores" }} />;
@@ -95,8 +103,28 @@ async function Ficha({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </Seccion>
 
-      <Seccion titulo="Evaluaciones y objetivos">
-        <Vacio>Todavía no se guardan en la base de datos. Por ahora solo existen en la demostración, con datos ficticios.</Vacio>
+      <Seccion titulo="Evaluaciones">
+        {j.activo && hayMetodologia && (
+          <div className="mb-4 flex flex-wrap gap-3">
+            <EnlaceBoton href={`/evaluaciones/nueva?jugador=${j.id}&tipo=rapida`}>Evaluación rápida</EnlaceBoton>
+            <EnlaceBoton href={`/evaluaciones/nueva?jugador=${j.id}&tipo=completa`} variante="secundario">
+              Evaluación completa
+            </EnlaceBoton>
+          </div>
+        )}
+        {!evaluaciones.ok ? (
+          <ErrorCarga mensaje={evaluaciones.mensaje} />
+        ) : evaluaciones.datos.length > 0 ? (
+          <ListaEvaluaciones evaluaciones={evaluaciones.datos} etiqueta="Historial de evaluaciones" />
+        ) : (
+          <Vacio>
+            Todavía no tiene evaluaciones.
+            {!hayMetodologia && " Antes, la dirección debe definir la metodología de la escuela."}
+          </Vacio>
+        )}
+        <p className="mt-3 text-xs text-tenue">
+          El seguimiento de objetivos con progreso todavía solo está en la demostración.
+        </p>
       </Seccion>
     </>
   );

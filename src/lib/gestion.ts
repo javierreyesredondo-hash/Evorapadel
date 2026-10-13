@@ -259,3 +259,14 @@ export function filtrarJugadoresReales(
     return palabras.every((p) => texto.includes(p));
   });
 }
+
+/**
+ * Funciones de una persona en su escuela. El rol (director/entrenador) marca
+ * sus permisos; entrenar depende de los grupos que tiene asignados. Un director
+ * con grupos dirige Y entrena con la misma cuenta y sin perder permisos.
+ */
+export function textoFunciones(rol: "director" | "entrenador", gruposQueEntrena: number): string {
+  const grupos = `${gruposQueEntrena} ${gruposQueEntrena === 1 ? "grupo" : "grupos"}`;
+  if (rol === "director") return gruposQueEntrena > 0 ? `Dirección y entrenamiento · entrena ${grupos}` : "Dirección";
+  return gruposQueEntrena > 0 ? `Entrenamiento · ${grupos}` : "Entrenamiento · sin grupos asignados";
+}

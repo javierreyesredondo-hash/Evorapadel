@@ -118,8 +118,9 @@ select prueba.ok(
   'todas las políticas son solo para authenticated (ninguna para anon ni public)');
 
 select prueba.ok(
-  (select count(*) from pg_policies where schemaname = 'public') = 16,
-  'existen exactamente las 16 políticas revisadas');
+  (select count(*) from pg_policies where schemaname = 'public'
+     and tablename in ('escuelas', 'perfiles', 'membresias', 'jugadores', 'grupos', 'grupo_jugadores')) = 16,
+  'existen exactamente las 16 políticas revisadas en las tablas de la migración 1');
 
 select prueba.ok(
   not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace

@@ -29,10 +29,10 @@ test("enlaces antiguos de la demo (/jugadores/j1) van a /demo", () => {
 });
 
 test("fichas reales: UUID o «nuevo»; lo demás es 404 sin consultar la base de datos", () => {
-  for (const ruta of [`/jugadores/${UUID}`, "/jugadores/nuevo", `/grupos/${UUID}`, "/grupos/nuevo", `/jugadores/${UUID}/editar`, "/jugadores", "/grupos"]) {
+  for (const ruta of [`/jugadores/${UUID}`, "/jugadores/nuevo", `/grupos/${UUID}`, "/grupos/nuevo", `/evaluaciones/${UUID}`, "/evaluaciones/nueva", `/evaluaciones/${UUID}/pdf`, `/jugadores/${UUID}/editar`, "/jugadores", "/grupos"]) {
     assert.deepEqual(decidirRuta(ruta), { tipo: "seguir" }, ruta);
   }
-  for (const ruta of ["/jugadores/no-existe", "/jugadores/J1", "/grupos/abc", "/jugadores/x%27", "/jugadores/%E0%A4%A", "/grupos/%"]) {
+  for (const ruta of ["/jugadores/no-existe", "/jugadores/J1", "/grupos/abc", "/jugadores/x%27", "/jugadores/%E0%A4%A", "/grupos/%", "/evaluaciones/r1", "/evaluaciones/x%27"]) {
     assert.deepEqual(decidirRuta(ruta), { tipo: "no-encontrado" }, ruta);
   }
 });

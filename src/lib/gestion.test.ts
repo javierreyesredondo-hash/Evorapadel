@@ -12,6 +12,7 @@ import {
   normalizarJugador,
   resumenJugadorReal,
   validarGrupo,
+  textoFunciones,
   validarJugador,
   type JugadorReal,
 } from "./gestion.ts";
@@ -143,4 +144,12 @@ test("filtrarJugadoresReales: estado, nivel y texto (incluye grupos)", () => {
   assert.deepEqual(ids({ texto: "lucia", nivel: null, estado: "activos" }), ["1"]);
   assert.deepEqual(ids({ texto: "sub-14", nivel: null, estado: "activos" }), ["1"]);
   assert.deepEqual(ids({ texto: "", nivel: "intermedio", estado: "activos" }), ["2"]);
+});
+
+test("textoFunciones: un director con grupos dirige y entrena", () => {
+  assert.equal(textoFunciones("director", 0), "Dirección");
+  assert.equal(textoFunciones("director", 1), "Dirección y entrenamiento · entrena 1 grupo");
+  assert.equal(textoFunciones("director", 3), "Dirección y entrenamiento · entrena 3 grupos");
+  assert.equal(textoFunciones("entrenador", 2), "Entrenamiento · 2 grupos");
+  assert.equal(textoFunciones("entrenador", 0), "Entrenamiento · sin grupos asignados");
 });
