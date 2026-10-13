@@ -3,13 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { claseBoton } from "@/components/ui";
+import { IconCompartir, IconDescargar } from "@/components/icons";
 
 // Descargar o compartir el PDF del informe.
 //
 // El PDF se pide al servidor (que lo genera con los datos guardados y comprueba
 // la sesión) al abrir la página, para tenerlo listo: Safari y Chrome solo
 // permiten navigator.share() dentro del gesto del usuario, sin esperas de red.
-// Si el navegador no puede compartir archivos, se ofrece la descarga.
+// Si el navegador no puede compartir archivos, «Compartir informe» descarga el
+// PDF y explica cómo enviarlo: el botón está siempre en el mismo sitio.
 
 type Estado = "preparando" | "listo" | "error";
 
@@ -46,7 +48,7 @@ export function AccionesInforme({ url, nombreArchivo, titulo }: { url: string; n
     };
   }, [url, nombreArchivo, intento]);
 
-  function descargar() {
+  function descargar(aviso = "PDF descargado. Búscalo en las descargas de tu dispositivo.") {
     if (!archivo.current) return;
     const enlace = document.createElement("a");
     const href = URL.createObjectURL(archivo.current);
@@ -56,13 +58,19 @@ export function AccionesInforme({ url, nombreArchivo, titulo }: { url: string; n
     enlace.click();
     enlace.remove();
     setTimeout(() => URL.revokeObjectURL(href), 10_000);
-    setMensaje("PDF descargado. Búscalo en las descargas de tu dispositivo.");
+    setMensaje(aviso);
   }
 
   async function compartir() {
     if (!archivo.current) return;
+    if (!puedeCompartir) {
+      descargar("Este navegador no permite compartir archivos: el PDF se ha descargado. Adjúntalo en WhatsApp o en el correo.");
+      return;
+    }
     try {
-      await navigator.share({ files: [archivo.current], title: titulo, text: titulo });
+      // Solo el archivo y un título: con «text», algunas apps de iOS envían el
+      // texto y descartan el PDF. El nombre del archivo ya identifica el informe.
+      await navigator.share({ files: [archivo.current], title: titulo });
       setMensaje("Informe compartido.");
     } catch (e) {
       // Cancelar el menú de compartir no es un error.
@@ -79,34 +87,42 @@ export function AccionesInforme({ url, nombreArchivo, titulo }: { url: string; n
 
   const listo = estado === "listo";
   return (
-    <div className="space-y-3">
-      <p role="status" aria-live="polite" className="text-sm text-tenue">
+    <section aria-label="Enviar el informe" className="space-y-3 rounded-2xl bg-noche-700 p-4 ring-1 ring-electrico/40">
+      <p role="status" aria-live="polite" className="text-sm text-blanco/80">
         {estado === "preparando" && "Preparando el PDF…"}
         {estado === "listo" && "PDF listo."}
         {estado === "error" && <span className="font-semibold text-naranja">No se ha podido generar el PDF. Vuelve a intentarlo.</span>}
       </p>
-      <div className="flex flex-wrap gap-3">
-        {puedeCompartir && (
-          <button type="button" onClick={compartir} disabled={!listo} className={claseBoton.primario}>
-            Compartir (WhatsApp…)
-          </button>
-        )}
-        <button type="button" onClick={descargar} disabled={!listo} className={puedeCompartir ? claseBoton.secundario : claseBoton.primario}>
-          Descargar PDF
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <button type="button" onClick={compartir} disabled={!listo} className={`${claseBoton.primario} w-full sm:w-auto`}>
+          <IconCompartir />
+          Compartir informe
         </button>
-        <a href={url} target="_blank" rel="noopener" className={claseBoton.secundario}>
-          Abrir PDF
-        </a>
-        <button type="button" onClick={regenerar} disabled={estado === "preparando"} className={claseBoton.secundario}>
-          Volver a generar
+        <button type="button" onClick={() => descargar()} disabled={!listo} className={`${claseBoton.secundario} w-full sm:w-auto`}>
+          <IconDescargar />
+          Descargar PDF
         </button>
       </div>
       {!puedeCompartir && listo && (
         <p className="text-xs text-tenue">
-          Este navegador no permite compartir archivos directamente. Descarga el PDF y adjúntalo en WhatsApp.
+          Este navegador no permite compartir archivos directamente: «Compartir informe» descarga el PDF para que lo
+          adjuntes en WhatsApp o en el correo.
         </p>
       )}
       {mensaje && <p className="text-sm font-semibold text-blanco">{mensaje}</p>}
-    </div>
+      <div className="flex flex-wrap gap-x-5 border-t border-noche-500 pt-1 text-sm">
+        <a href={url} target="_blank" rel="noopener" className="inline-flex min-h-11 items-center font-semibold text-electrico">
+          Abrir PDF en otra pestaña
+        </a>
+        <button
+          type="button"
+          onClick={regenerar}
+          disabled={estado === "preparando"}
+          className="inline-flex min-h-11 items-center font-semibold text-electrico disabled:opacity-40"
+        >
+          Volver a generar
+        </button>
+      </div>
+    </section>
   );
 }
