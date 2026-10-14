@@ -19,6 +19,8 @@ export type InformeEvaluacion = {
   media: number | null;
   fortalezas: string | null;
   mejoras: string | null;
+  /** Interpretación técnica individual (propuesta automática revisada). */
+  interpretacion?: string | null;
   observaciones: string | null;
   objetivos: ObjetivoEvaluacion[];
   /** Evolución en competencias comunes con la evaluación anterior del mismo tipo. */
@@ -31,7 +33,20 @@ export type InformeEvaluacion = {
   escala?: Escala;
   /** Metodología importada vigente al crear la evaluación (null: la propia de la escuela). */
   metodologia?: { nombre: string; version: string } | null;
+  /** Versión aprobada de la redacción que se muestra (null: evaluación anterior a las versiones). */
+  redaccion?: { version: number; guardada: string; origen: "propuesta" | "revisada" | "manual" } | null;
 };
+
+/** Nota sobre el origen de la redacción (qué se generó y quién la aprobó). */
+export function textoOrigenRedaccion(m: Pick<InformeEvaluacion, "redaccion">): string | null {
+  const r = m.redaccion;
+  if (!r || r.origen === "manual") return null;
+  const base =
+    r.origen === "propuesta"
+      ? "Fortalezas, aspectos a mejorar e interpretación propuestos automáticamente a partir de las puntuaciones y aprobados por el entrenador/a."
+      : "Fortalezas, aspectos a mejorar e interpretación propuestos automáticamente a partir de las puntuaciones y revisados por el entrenador/a.";
+  return r.version > 1 ? `${base} Redacción revisada (versión ${r.version}).` : base;
+}
 
 export const TEXTO_SIN_ENTRENADOR = "Equipo técnico de la escuela";
 

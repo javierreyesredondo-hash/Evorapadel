@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { textoFecha } from "@/lib/format";
 import { NIVEL_TEXTO, type NivelBD } from "@/lib/gestion";
 import { textoDiferencia, textoMediaEvaluacion, TIPO_TEXTO } from "@/lib/evaluaciones";
-import { TEXTO_SIN_ENTRENADOR, textoSinComparacion, type InformeEvaluacion } from "@/lib/informe";
+import { TEXTO_SIN_ENTRENADOR, textoOrigenRedaccion, textoSinComparacion, type InformeEvaluacion } from "@/lib/informe";
 import { ESCALA_NOTAS, etiquetaGrupo } from "@/lib/metodologia";
 
 // Contenido de una evaluación a partir del MISMO modelo que el PDF
@@ -123,10 +123,16 @@ export function VistaInforme({ informe: m, variante = "app" }: { informe: Inform
         </Seccion>
       )}
       {m.mejoras && (
-        <Seccion titulo="Áreas prioritarias de mejora" variante={variante}>
+        <Seccion titulo="Aspectos a mejorar" variante={variante}>
           <Parrafos texto={m.mejoras} clase={e.texto} />
         </Seccion>
       )}
+      {m.interpretacion && (
+        <Seccion titulo="Interpretación técnica" variante={variante}>
+          <Parrafos texto={m.interpretacion} clase={e.texto} />
+        </Seccion>
+      )}
+      {textoOrigenRedaccion(m) && <p className={`mt-3 text-xs italic ${e.tenue}`}>{textoOrigenRedaccion(m)}</p>}
       {m.objetivos.length > 0 && (
         <Seccion titulo="Objetivos de mejora" variante={variante}>
           <ul className={`list-disc space-y-2 pl-5 text-sm ${e.texto}`}>

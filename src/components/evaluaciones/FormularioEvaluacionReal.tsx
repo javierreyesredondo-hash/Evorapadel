@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useMemo, useRef, useState } from "react";
 import { guardarEvaluacion } from "@/app/acciones-evaluaciones";
 import type { EstadoFormulario } from "@/app/acciones-gestion";
 import {
@@ -14,6 +14,8 @@ import {
   type TipoEvaluacion,
 } from "@/lib/evaluaciones";
 import { ESCALA_NOTAS, etiquetaGrupo, type Escala } from "@/lib/metodologia";
+import { escalaDescrita, generarRedaccion, type EscalaDescrita } from "@/lib/redaccion";
+import { PropuestaInforme, useRedaccion } from "@/components/evaluaciones/PropuestaInforme";
 import { claseBoton } from "@/components/ui";
 import { Campo, claseCampo, MensajeError } from "@/components/campos";
 import { useTrasGuardar } from "@/components/gestion/useTrasGuardar";
@@ -29,6 +31,7 @@ export type InicialEvaluacion = {
   titulo: string;
   fortalezas: string;
   mejoras: string;
+  interpretacion: string;
   observaciones: string;
   notas: Record<string, string>;
   objetivos: ObjetivoEvaluacion[];
@@ -42,6 +45,8 @@ type Props = {
   hoy: string;
   /** Escala de la metodología con la que se evalúa (por defecto, la de ÉVORA). */
   escala?: Escala;
+  /** La misma escala con las descripciones de cada nivel (para la propuesta de informe). */
+  niveles?: EscalaDescrita;
 };
 
 const NOTAS = [1, 2, 3, 4, 5] as const;
@@ -62,7 +67,7 @@ export function FormularioEvaluacionReal(props: Props) {
   return <Formulario key={version} {...props} reiniciar={() => setVersion((v) => v + 1)} />;
 }
 
-function Formulario({ jugadores, competencias, inicial, hoy, escala = ESCALA_NOTAS, reiniciar }: Props & { reiniciar: () => void }) {
+function Formulario({ jugadores, competencias, inicial, hoy, escala = ESCALA_NOTAS, niveles, reiniciar }: Props & { reiniciar: () => void }) {
   const formRef = useRef<HTMLFormElement>(null);
   const claveRef = useRef<string | null>(null);
   const [estado, accion, pendiente] = useActionState<EstadoFormulario, FormData>(guardarEvaluacion, {});
@@ -79,11 +84,26 @@ function Formulario({ jugadores, competencias, inicial, hoy, escala = ESCALA_NOT
   const [objetivos, setObjetivos] = useState<ObjetivoEvaluacion[]>(
     inicial.objetivos.length > 0 ? inicial.objetivos : [{ descripcion: "", plazo: null }],
   );
-  const [textos, setTextos] = useState({
-    fortalezas: inicial.fortalezas,
-    mejoras: inicial.mejoras,
-    observaciones: inicial.observaciones,
-  });
+  const [observaciones, setObservaciones] = useState(inicial.observaciones);
+  const escalaConNiveles = useMemo(() => niveles ?? escalaDescrita(escala), [niveles, escala]);
+  const propuesta = useMemo(
+    () =>
+      generarRedaccion({
+        notas: competencias
+          .filter((c) => notas[c.id])
+          .map((c) => ({ nombre: c.nombre, grupo: c.grupo ?? null, descripcion: c.descripcion, orden: c.orden, puntuacion: Number(notas[c.id]) as 1 })),
+        totalCompetencias: tipo === "completa" ? competencias.filter((c) => c.activa).length : competencias.length,
+        escala: escalaConNiveles,
+        observaciones,
+        objetivo: objetivos[0]?.descripcion,
+      }),
+    [competencias, notas, tipo, escalaConNiveles, observaciones, objetivos],
+  );
+  // Al editar, lo guardado se respeta (no se sustituye por la propuesta).
+  const redaccion = useRedaccion(
+    propuesta,
+    editando ? { fortalezas: inicial.fortalezas, mejoras: inicial.mejoras, interpretacion: inicial.interpretacion } : undefined,
+  );
 
   const jugador = jugadores.find((j) => j.id === jugadorId);
   const err = (campo: string) => estado.errores?.[campo];
@@ -255,32 +275,18 @@ function Formulario({ jugadores, competencias, inicial, hoy, escala = ESCALA_NOT
         })}
       </section>
 
-      {(
-        [
-          ["fortalezas", "Fortalezas detectadas", 3],
-          ["mejoras", "Áreas prioritarias de mejora", 3],
-          ["observaciones", "Observaciones del entrenador/a", 5],
-        ] as const
-      ).map(([campo, etiqueta, filas]) => (
-        <Campo
-          key={campo}
-          id={campo}
-          etiqueta={`${etiqueta} (opcional)`}
-          error={err(campo)}
-          ayuda={`${textos[campo].length}/${LIMITES_EVALUACION[campo]}`}
-        >
-          <textarea
-            id={campo}
-            name={campo}
-            rows={filas}
-            value={textos[campo]}
-            onChange={(e) => setTextos((t) => ({ ...t, [campo]: e.target.value }))}
-            maxLength={LIMITES_EVALUACION[campo]}
-            className={`${claseCampo} h-auto py-3`}
-            {...invalido(campo)}
-          />
-        </Campo>
-      ))}
+      <Campo id="observaciones" etiqueta="Observaciones del entrenador/a (opcional)" error={err("observaciones")} ayuda={`${observaciones.length}/${LIMITES_EVALUACION.observaciones}`}>
+        <textarea
+          id="observaciones"
+          name="observaciones"
+          rows={4}
+          value={observaciones}
+          onChange={(e) => setObservaciones(e.target.value)}
+          maxLength={LIMITES_EVALUACION.observaciones}
+          className={`${claseCampo} h-auto py-3`}
+          {...invalido("observaciones")}
+        />
+      </Campo>
 
       <section aria-labelledby="objetivos-titulo" className="space-y-3">
         <div>
@@ -332,6 +338,14 @@ function Formulario({ jugadores, competencias, inicial, hoy, escala = ESCALA_NOT
           </button>
         )}
       </section>
+
+      <PropuestaInforme
+        propuesta={propuesta}
+        redaccion={redaccion}
+        prefijo="ev"
+        errores={{ fortalezas: err("fortalezas"), mejoras: err("mejoras"), interpretacion: err("interpretacion") }}
+      />
+      <input type="hidden" name="propuesta" value={redaccion.propuestaJson} />
 
       {estado.error && (
         <p role="alert" className="rounded-xl border border-naranja/40 bg-naranja/10 px-3 py-2 text-sm font-semibold text-naranja">

@@ -15,6 +15,11 @@
 > aplicarla**: las evaluaciones y la metodología leen columnas nuevas y darían
 > error (ver «Metodologías importadas (migración 4)»).
 >
+> **Migración 5 (`20261016090000_redaccion_evaluaciones.sql`, evaluación en
+> cadena e informe automático): preparada y probada en local, NO aplicada.**
+> ⚠️ Igual que la 4: aplicarla **antes** de desplegar el código que la usa (ver
+> «Redacción automática e historial (migración 5)»).
+>
 > ⚠️ **No ejecutar `supabase db push`** contra este proyecto: como las migraciones
 > se aplicaron a mano, la CLI no tiene su historial e intentaría ejecutarlas otra
 > vez. Ver «Migraciones aplicadas a mano y CLI de Supabase».
@@ -27,14 +32,16 @@
 | `migrations/20261013090000_alta_primera_escuela.sql` | Migración 2: perfiles para usuarios registrados antes de migrar y alta segura de una escuela con su director. |
 | `migrations/20261014090000_evaluaciones.sql` | Migración 3: metodología (competencias), evaluaciones, puntuaciones 1–5, objetivos con plazo, RLS y guardado atómico `guardar_evaluacion`. |
 | `migrations/20261015090000_metodologias_importadas.sql` | Migración 4 (**sin aplicar**): metodologías importadas desde PDF (borrador / activa / archivada), versión de metodología de cada evaluación y competencias de la metodología activa. |
+| `migrations/20261016090000_redaccion_evaluaciones.sql` | Migración 5 (**sin aplicar**): interpretación técnica de cada evaluación, historial inmutable de la redacción aprobada y `guardar_evaluacion` con dos parámetros opcionales nuevos. |
 | `tests/00_entorno_local.sql` | Simulación de Supabase para pruebas **locales** (roles, `auth`, `postgres` no superusuario). **Nunca** ejecutarlo en Supabase. |
 | `tests/05_antes_de_migrar.sql` | Prueba: un usuario se registra en Auth **antes** de aplicar las migraciones. |
 | `tests/10_aislamiento.sql` | 98 comprobaciones de aislamiento entre escuelas, permisos, estructura y alta de escuelas. |
 | `tests/20_evaluaciones.sql` | 75 comprobaciones de la migración 3: permisos por rol, aislamiento, validaciones, manipulación de identificadores, duplicados y borrados. |
 | `tests/30_metodologias.sql` | 49 comprobaciones de la migración 4: permisos, aislamiento, duplicados, activación, versiones e historial de evaluaciones. |
+| `tests/40_redacciones.sql` | 23 comprobaciones de la migración 5: copia de la redacción en cada guardado, reenvíos sin duplicar, inmutabilidad, permisos, aislamiento y compatibilidad con la llamada anterior. |
 | `../scripts/probar-migracion.sh` | PostgreSQL local desechable: aplica la migración como `postgres` y ejecuta las pruebas (`npm run test:db`). |
 | `../scripts/probar-migracion-supabase.sh` | Lo mismo sobre la **imagen oficial** `supabase/postgres` en Docker (`npm run test:db:supabase`). |
-| `../scripts/probar-mutaciones.mjs` | Introduce 45 fallos de seguridad, uno a uno, y exige que las pruebas los detecten (`npm run test:db:mutaciones`). |
+| `../scripts/probar-mutaciones.mjs` | Introduce 54 fallos de seguridad, uno a uno, y exige que las pruebas los detecten (`npm run test:db:mutaciones`). |
 
 ## Modelo
 
@@ -186,10 +193,12 @@ devuelven datos personales:
 --    evaluacion_puntuaciones, evaluaciones, grupo_jugadores, grupos,
 --    jugadores, membresias, perfiles), todas con rowsecurity = true.
 --    Con la migración 4: 11 (+ metodologias).
+--    Con la migración 5: 12 (+ evaluacion_redacciones).
 select tablename, rowsecurity from pg_tables where schemaname = 'public' order by 1;
 
 -- 2) Políticas. Esperado: 28 (16 de la migración 1 + 12 de la 3).
 --    Con la migración 4: 31 (+ 3 en metodologias, ninguna de borrado).
+--    Con la migración 5: 33 (+ 2 en evaluacion_redacciones: leer y añadir).
 --    Ninguna de borrado en competencias ni en evaluaciones: no se borran.
 select tablename, policyname, cmd from pg_policies where schemaname = 'public' order by 1, 2;
 
@@ -447,6 +456,37 @@ equivalente que además distingue metodología y grupo.
 
 Probada en local: `npm run test:db` (incluye `30_metodologias.sql`),
 `npm run test:db:mutaciones` (45/45 fallos detectados) y `npm run test:e2e`.
+
+## Redacción automática e historial (migración 5)
+
+> **Estado: preparada, NO aplicada.** No se ha ejecutado SQL en producción.
+
+### Qué añade
+
+| Objeto | Para qué |
+|---|---|
+| `evaluaciones.interpretacion` | Interpretación técnica individual (propuesta por la app a partir de las puntuaciones y revisada por el entrenador/a). |
+| `evaluacion_redacciones` | Copia **inmutable** de la redacción aprobada en cada guardado: fortalezas, aspectos a mejorar, interpretación, observaciones, objetivo y la propuesta automática que se mostró. Al editar una evaluación se añade una versión; las anteriores no cambian. |
+| `guardar_evaluacion(…, p_interpretacion, p_propuesta)` | Los dos parámetros nuevos son opcionales y van al final: la llamada anterior sigue funcionando. La copia se guarda en la misma transacción; un reenvío (misma `clave_envio`) no crea otra. |
+
+Reglas en la base de datos: el texto de cada versión lo copia un trigger
+(`SECURITY INVOKER`) de lo que quedó guardado, no lo envía el cliente (solo
+elige la evaluación y la propuesta mostrada); número de versión, autor y fecha
+tampoco. Leer: miembros de la escuela. Añadir: quien puede editar la evaluación
+(dirección o su autor). Nadie cambia ni borra versiones (sin políticas ni
+permisos); desaparecen solo con la evaluación (p. ej. al suprimir un jugador).
+No rellena ni modifica evaluaciones existentes. Sin funciones `SECURITY DEFINER`
+nuevas.
+
+### Orden y cómo aplicarla
+
+Requiere 1 → 4 aplicadas. Mismo procedimiento que la 4: copia de seguridad,
+*SQL Editor* con `begin; … commit;`, y comprobar **12 tablas y 33 políticas**.
+Solo después fusionar y desplegar la app que la usa (llama a
+`guardar_evaluacion` con los parámetros nuevos y lee `interpretacion` y
+`evaluacion_redacciones`). La migración es compatible con la app anterior
+(parámetros opcionales); revisado y probado con la llamada antigua en
+`40_redacciones.sql`.
 
 ## Secretos
 

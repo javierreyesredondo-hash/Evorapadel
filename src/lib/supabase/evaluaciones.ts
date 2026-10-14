@@ -11,7 +11,9 @@ import {
   type PuntuacionCompetencia,
   type TipoEvaluacion,
 } from "@/lib/evaluaciones";
+import type { EvaluacionHoy } from "@/lib/cadena";
 import type { InformeEvaluacion } from "@/lib/informe";
+import { origenRedaccion, validarPropuestaGuardada } from "@/lib/redaccion";
 import { escalaDe, type AreaCompetencia } from "@/lib/metodologia";
 import type { ContextoEscuela, Resultado } from "@/lib/supabase/gestion";
 
@@ -145,6 +147,7 @@ export type EvaluacionCompleta = {
   titulo: string | null;
   fortalezas: string | null;
   mejoras: string | null;
+  interpretacion: string | null;
   observaciones: string | null;
   entrenadorId: string | null;
   jugador: { id: string; nombre: string; nivel: string | null; activo: boolean };
@@ -156,7 +159,7 @@ export type EvaluacionCompleta = {
 };
 
 const SELECT_DETALLE = [
-  "id, tipo, fecha, created_at, titulo, fortalezas, mejoras, observaciones, entrenador_id",
+  "id, tipo, fecha, created_at, titulo, fortalezas, mejoras, interpretacion, observaciones, entrenador_id",
   "jugador:jugadores(id, nombre, nivel, activo)",
   "grupo:grupos(id, nombre)",
   "evaluacion_puntuaciones(puntuacion, competencia:competencias(id, nombre, area, grupo, orden))",
@@ -204,6 +207,7 @@ export async function obtenerEvaluacion(ctx: ContextoEscuela, id: string): Promi
       titulo: (f.titulo as string | null) ?? null,
       fortalezas: (f.fortalezas as string | null) ?? null,
       mejoras: (f.mejoras as string | null) ?? null,
+      interpretacion: (f.interpretacion as string | null) ?? null,
       observaciones: (f.observaciones as string | null) ?? null,
       entrenadorId: (f.entrenador_id as string | null) ?? null,
       jugador,
@@ -270,17 +274,23 @@ export async function nombreVisible(ctx: ContextoEscuela, usuarioId: string | nu
 export async function obtenerInforme(
   ctx: ContextoEscuela,
   id: string,
-): Promise<Resultado<{ informe: InformeEvaluacion; evaluacion: EvaluacionCompleta } | null>> {
+): Promise<Resultado<{ informe: InformeEvaluacion; evaluacion: EvaluacionCompleta; versiones: VersionRedaccion[] } | null>> {
   const r = await obtenerEvaluacion(ctx, id);
   if (!r.ok) return r;
   if (!r.datos) return { ok: true, datos: null };
   const ev = r.datos;
-  const [anterior, entrenador] = await Promise.all([obtenerAnterior(ctx, ev), nombreVisible(ctx, ev.entrenadorId)]);
+  const [anterior, entrenador, redacciones] = await Promise.all([
+    obtenerAnterior(ctx, ev),
+    nombreVisible(ctx, ev.entrenadorId),
+    listarRedacciones(ctx, ev.id),
+  ]);
   if (!anterior.ok) return anterior;
+  const ultima = redacciones.ok ? (redacciones.datos[0] ?? null) : null;
   return {
     ok: true,
     datos: {
       evaluacion: ev,
+      versiones: redacciones.ok ? redacciones.datos : [],
       informe: {
       escuela: ctx.escuelaNombre,
       jugador: { nombre: ev.jugador.nombre, nivel: ev.jugador.nivel },
@@ -293,8 +303,10 @@ export async function obtenerInforme(
       media: media(ev.puntuaciones),
       fortalezas: ev.fortalezas,
       mejoras: ev.mejoras,
+      interpretacion: ev.interpretacion,
       observaciones: ev.observaciones,
       objetivos: ev.objetivos,
+      redaccion: ultima ? { version: ultima.version, guardada: ultima.creada, origen: ultima.origen } : null,
       comparacion: compararEvaluaciones(ev.puntuaciones, anterior.datos),
       hayAnterior: anterior.datos !== null,
       emitido: hoyIso(),
@@ -302,5 +314,79 @@ export async function obtenerInforme(
       metodologia: ev.metodologia ? { nombre: ev.metodologia.nombre, version: ev.metodologia.version } : null,
       },
     },
+  };
+}
+
+// ------------------------------------------------- historial de la redacción
+
+export type VersionRedaccion = {
+  version: number;
+  creada: string;
+  autorId: string | null;
+  fortalezas: string | null;
+  mejoras: string | null;
+  interpretacion: string | null;
+  observaciones: string | null;
+  objetivo: string | null;
+  /** Si se partió de la propuesta automática y si se cambió antes de guardar. */
+  origen: "propuesta" | "revisada" | "manual";
+};
+
+/** Versiones aprobadas de la redacción de una evaluación (la más reciente primero). */
+export async function listarRedacciones(ctx: ContextoEscuela, evaluacionId: string): Promise<Resultado<VersionRedaccion[]>> {
+  if (!esUuid(evaluacionId)) return { ok: true, datos: [] };
+  const { data, error } = await ctx.supabase
+    .from("evaluacion_redacciones")
+    .select("version, created_at, autor_id, fortalezas, mejoras, interpretacion, observaciones, objetivo, propuesta")
+    .eq("escuela_id", ctx.escuelaId)
+    .eq("evaluacion_id", evaluacionId)
+    .order("version", { ascending: false })
+    .limit(50);
+  if (error) {
+    registrar("historial de la redacción", error);
+    return { ok: false, mensaje: ERROR_LECTURA };
+  }
+  return {
+    ok: true,
+    datos: (data ?? []).map((f) => {
+      const texto = (v: unknown) => (typeof v === "string" ? v : null);
+      const guardado = { fortalezas: texto(f.fortalezas), mejoras: texto(f.mejoras), interpretacion: texto(f.interpretacion) };
+      return {
+        version: f.version as number,
+        creada: f.created_at as string,
+        autorId: (f.autor_id as string | null) ?? null,
+        ...guardado,
+        observaciones: texto(f.observaciones),
+        objetivo: texto(f.objetivo),
+        origen: origenRedaccion(guardado, validarPropuestaGuardada(f.propuesta)),
+      };
+    }),
+  };
+}
+
+// ------------------------------------------------- evaluación en cadena
+
+/** Evaluaciones de hoy de un grupo (para la evaluación en cadena). */
+export async function evaluacionesDelDia(ctx: ContextoEscuela, grupoId: string, fecha: string): Promise<Resultado<EvaluacionHoy[]>> {
+  if (!esUuid(grupoId)) return { ok: true, datos: [] };
+  const { data, error } = await ctx.supabase
+    .from("evaluaciones")
+    .select("id, jugador_id, entrenador_id, created_at, evaluacion_puntuaciones(count)")
+    .eq("escuela_id", ctx.escuelaId)
+    .eq("grupo_id", grupoId)
+    .eq("fecha", fecha)
+    .order("created_at", { ascending: true });
+  if (error) {
+    registrar("evaluaciones del día", error);
+    return { ok: false, mensaje: ERROR_LECTURA };
+  }
+  return {
+    ok: true,
+    datos: (data ?? []).map((f) => ({
+      id: f.id as string,
+      jugadorId: f.jugador_id as string,
+      entrenadorId: (f.entrenador_id as string | null) ?? null,
+      numeroNotas: (uno(f.evaluacion_puntuaciones as { count: number }[] | null)?.count ?? 0) as number,
+    })),
   };
 }

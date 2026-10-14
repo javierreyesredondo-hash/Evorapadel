@@ -20,6 +20,7 @@ export const LIMITES_EVALUACION = {
   titulo: 80,
   fortalezas: 1500,
   mejoras: 1500,
+  interpretacion: 2000,
   observaciones: 3000,
   objetivos: 5,
   objetivo: { min: 2, max: 200 },
@@ -62,6 +63,7 @@ export type DatosEvaluacion = {
   grupoId: string | null;
   fortalezas: string | null;
   mejoras: string | null;
+  interpretacion: string | null;
   observaciones: string | null;
   puntuaciones: { competencia: string; puntuacion: Nota }[];
   objetivos: ObjetivoEvaluacion[];
@@ -106,6 +108,7 @@ export function validarEvaluacion(
     grupoId?: unknown;
     fortalezas?: unknown;
     mejoras?: unknown;
+    interpretacion?: unknown;
     observaciones?: unknown;
     notas: Record<string, unknown>;
     objetivos: { descripcion?: unknown; plazo?: unknown }[];
@@ -128,8 +131,8 @@ export function validarEvaluacion(
   const grupo = limpiarTexto(entrada.grupoId);
   if (grupo !== "" && !esUuid(grupo)) errores.grupoId = "Elige un grupo de la lista.";
 
-  const textos = {} as Record<"fortalezas" | "mejoras" | "observaciones", string | null>;
-  for (const campo of ["fortalezas", "mejoras", "observaciones"] as const) {
+  const textos = {} as Record<"fortalezas" | "mejoras" | "interpretacion" | "observaciones", string | null>;
+  for (const campo of ["fortalezas", "mejoras", "interpretacion", "observaciones"] as const) {
     const t = limpiarParrafo(entrada[campo]);
     if (t.length > LIMITES_EVALUACION[campo]) errores[campo] = `Máximo ${LIMITES_EVALUACION[campo]} caracteres (ahora ${t.length}).`;
     textos[campo] = t === "" ? null : t;

@@ -10,7 +10,7 @@ import fontkit from "@pdf-lib/fontkit";
 import { textoFecha } from "../format.ts";
 import { NIVEL_TEXTO, type NivelBD } from "../gestion.ts";
 import { textoDiferencia, textoMediaEvaluacion, TIPO_TEXTO } from "../evaluaciones.ts";
-import { TEXTO_SIN_ENTRENADOR, textoSinComparacion, type InformeEvaluacion } from "../informe.ts";
+import { TEXTO_SIN_ENTRENADOR, textoOrigenRedaccion, textoSinComparacion, type InformeEvaluacion } from "../informe.ts";
 import { ESCALA_NOTAS, etiquetaGrupo } from "../metodologia.ts";
 import type { BytesFuente, FuentesInforme } from "./fuentes.ts";
 
@@ -331,12 +331,18 @@ export async function generarPdfInforme(
   // --- Textos del entrenador (solo los que existen: no se inventa nada)
   const bloques: [string, string | null][] = [
     ["Fortalezas", m.fortalezas],
-    ["Áreas prioritarias de mejora", m.mejoras],
+    ["Aspectos a mejorar", m.mejoras],
+    ["Interpretación técnica", m.interpretacion ?? null],
   ];
   for (const [t, contenido] of bloques) {
     if (!contenido) continue;
     seccion(t);
     lienzo.parrafo(contenido, cuerpo);
+  }
+  const origen = textoOrigenRedaccion(m);
+  if (origen) {
+    lienzo.y -= 2;
+    lienzo.parrafo(origen, pequeno);
   }
 
   if (m.objetivos.length > 0) {

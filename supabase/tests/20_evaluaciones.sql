@@ -76,7 +76,7 @@ select prueba.ok(
   'el autor (entrenador_id) no se puede elegir y escuela/jugador/clave no se pueden cambiar');
 
 select prueba.ok(
-  not has_function_privilege('anon', 'public.guardar_evaluacion(uuid, uuid, uuid, uuid, uuid, public.tipo_evaluacion, date, text, text, text, text, jsonb, jsonb)', 'execute')
+  not has_function_privilege('anon', 'public.guardar_evaluacion(uuid, uuid, uuid, uuid, uuid, public.tipo_evaluacion, date, text, text, text, text, jsonb, jsonb, text, jsonb)', 'execute')
   and not exists (select 1 from pg_proc where proname = 'guardar_evaluacion' and prosecdef),
   'guardar_evaluacion: solo para usuarios autenticados y SECURITY INVOKER (respeta RLS)');
 

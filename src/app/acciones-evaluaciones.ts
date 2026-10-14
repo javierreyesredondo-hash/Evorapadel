@@ -6,6 +6,7 @@ import { hoyIso } from "@/lib/format";
 import { esUuid, limpiarTexto, mensajeErrorBD } from "@/lib/gestion";
 import { LIMITES_EVALUACION, validarCompetencia, validarEvaluacion } from "@/lib/evaluaciones";
 import { METODOLOGIA_BASE } from "@/lib/metodologia";
+import { validarPropuestaGuardada } from "@/lib/redaccion";
 import { listarCompetencias, obtenerEvaluacion, puedeEditar, type EvaluacionCompleta } from "@/lib/supabase/evaluaciones";
 import { contextoEscuela } from "@/lib/supabase/gestion";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
@@ -86,6 +87,7 @@ export async function guardarEvaluacion(_previo: EstadoFormulario, datos: FormDa
       grupoId: datos.get("grupo"),
       fortalezas: datos.get("fortalezas"),
       mejoras: datos.get("mejoras"),
+      interpretacion: datos.get("interpretacion"),
       observaciones: datos.get("observaciones"),
       notas: Object.fromEntries(permitidas.map((c) => [c.id, datos.get(`nota_${c.id}`)])),
       objetivos: Array.from({ length: LIMITES_EVALUACION.objetivos }, (_, i) => ({
@@ -129,6 +131,8 @@ export async function guardarEvaluacion(_previo: EstadoFormulario, datos: FormDa
     p_observaciones: v.valor.observaciones,
     p_puntuaciones: v.valor.puntuaciones,
     p_objetivos: v.valor.objetivos,
+    p_interpretacion: v.valor.interpretacion,
+    p_propuesta: propuestaDe(texto(datos, "propuesta")),
   });
   if (error) {
     console.error("ÉVORA PADEL: error al guardar una evaluación", error.code, error.message);
@@ -138,6 +142,134 @@ export async function guardarEvaluacion(_previo: EstadoFormulario, datos: FormDa
     return { error: mensajeErrorBD(error), valores };
   }
   return { ok: true, id: data as string, mensaje: editando ? "Evaluación actualizada." : "Evaluación guardada." };
+}
+
+/** Propuesta automática que se mostró (JSON del formulario), validada; null si no hay. */
+function propuestaDe(json: string): ReturnType<typeof validarPropuestaGuardada> {
+  if (!json || json.length > 12_000) return null;
+  try {
+    return validarPropuestaGuardada(JSON.parse(json));
+  } catch {
+    return null;
+  }
+}
+
+// --------------------------------------------------- evaluación en cadena
+
+export type EntradaCadena = {
+  grupoId: string;
+  jugadorId: string;
+  /** Identificador del envío: el mismo en los reintentos (no duplica). */
+  clave: string;
+  notas: Record<string, string>;
+  observaciones: string;
+  objetivo: string;
+  fortalezas: string;
+  mejoras: string;
+  interpretacion: string;
+  /** Propuesta automática mostrada (JSON), para distinguirla de lo editado. */
+  propuesta: string;
+};
+
+export type ResultadoCadena =
+  | { ok: true; id: string }
+  | { ok: false; error: string; errores?: Record<string, string>; existente?: { id: string } };
+
+/**
+ * Guarda la evaluación de un jugador en la evaluación en cadena de un grupo
+ * (hoy, en ese grupo). Si el jugador ya tiene una de hoy en el grupo, NO crea
+ * otra: devuelve la existente para verla o editarla. Un reintento con la misma
+ * clave devuelve la evaluación ya guardada (no duplica).
+ */
+export async function guardarEvaluacionCadena(entrada: EntradaCadena): Promise<ResultadoCadena> {
+  const ctx = await contextoEscuela();
+  if (!ctx) return { ok: false, error: SIN_ESCUELA };
+  if (typeof entrada !== "object" || entrada === null) return { ok: false, error: "No se ha recibido la evaluación." };
+  const { grupoId, jugadorId, clave } = entrada;
+  if (!esUuid(grupoId) || !esUuid(jugadorId)) return { ok: false, error: "Elige un jugador del grupo." };
+  if (!esUuid(clave)) return { ok: false, error: "No se ha podido preparar el envío. Recarga la página e inténtalo de nuevo." };
+
+  // El jugador debe estar activo y en ese grupo de la escuela.
+  const { data: asignado, error: errorGrupo } = await ctx.supabase
+    .from("grupo_jugadores")
+    .select("jugador:jugadores(id, activo)")
+    .eq("escuela_id", ctx.escuelaId)
+    .eq("grupo_id", grupoId)
+    .eq("jugador_id", jugadorId)
+    .maybeSingle();
+  if (errorGrupo) return { ok: false, error: mensajeErrorBD(errorGrupo) };
+  const jugador = Array.isArray(asignado?.jugador) ? asignado.jugador[0] : asignado?.jugador;
+  if (!jugador) return { ok: false, error: "El jugador no pertenece a este grupo." };
+  if (!(jugador as { activo: boolean }).activo) return { ok: false, error: "No se puede evaluar a un jugador archivado." };
+
+  const competencias = await listarCompetencias(ctx);
+  if (!competencias.ok) return { ok: false, error: competencias.mensaje };
+  const activas = competencias.datos.filter((c) => c.activa);
+  if (activas.length === 0) return { ok: false, error: "Tu escuela todavía no tiene metodología: la dirección debe definir las competencias." };
+
+  const hoy = hoyIso();
+  const notas = typeof entrada.notas === "object" && entrada.notas !== null ? entrada.notas : {};
+  const todas = activas.every((c) => /^[1-5]$/.test(String(notas[c.id] ?? "")));
+  const v = validarEvaluacion(
+    {
+      tipo: todas ? "completa" : "rapida",
+      fecha: hoy,
+      titulo: "",
+      grupoId,
+      fortalezas: entrada.fortalezas,
+      mejoras: entrada.mejoras,
+      interpretacion: entrada.interpretacion,
+      observaciones: entrada.observaciones,
+      notas,
+      objetivos: [{ descripcion: entrada.objetivo, plazo: "" }],
+    },
+    activas,
+    hoy,
+  );
+  if (!v.ok) {
+    const primero = Object.values(v.errores)[0];
+    return { ok: false, error: v.errores.notas ?? primero ?? "Revisa la evaluación.", errores: v.errores };
+  }
+
+  // ¿Ya hay una de hoy para este jugador en este grupo (de otro envío)? No se
+  // crea otra ni se sobrescribe: se ofrece verla o editarla.
+  const { data: previa, error: errorPrevia } = await ctx.supabase
+    .from("evaluaciones")
+    .select("id")
+    .eq("escuela_id", ctx.escuelaId)
+    .eq("jugador_id", jugadorId)
+    .eq("grupo_id", grupoId)
+    .eq("fecha", hoy)
+    .or(`clave_envio.is.null,clave_envio.neq.${clave}`)
+    .limit(1)
+    .maybeSingle();
+  if (errorPrevia) return { ok: false, error: mensajeErrorBD(errorPrevia) };
+  if (previa) return { ok: false, error: "Este jugador ya tiene una evaluación de hoy en este grupo.", existente: { id: previa.id as string } };
+
+  const { data, error } = await ctx.supabase.rpc("guardar_evaluacion", {
+    p_escuela: ctx.escuelaId,
+    p_id: null,
+    p_clave_envio: clave,
+    p_jugador: jugadorId,
+    p_grupo: grupoId,
+    p_tipo: v.valor.tipo,
+    p_fecha: v.valor.fecha,
+    p_titulo: null,
+    p_fortalezas: v.valor.fortalezas,
+    p_mejoras: v.valor.mejoras,
+    p_observaciones: v.valor.observaciones,
+    p_puntuaciones: v.valor.puntuaciones,
+    p_objetivos: v.valor.objetivos,
+    p_interpretacion: v.valor.interpretacion,
+    p_propuesta: propuestaDe(typeof entrada.propuesta === "string" ? entrada.propuesta : ""),
+  });
+  if (error) {
+    console.error("ÉVORA PADEL: error al guardar una evaluación en cadena", error.code, error.message);
+    if (error.code === "23514") return { ok: false, error: "El jugador no pertenece a este grupo." };
+    if (error.code === "23503") return { ok: false, error: "Alguna competencia ya no está disponible. Recarga la página." };
+    return { ok: false, error: mensajeErrorBD(error) };
+  }
+  return { ok: true, id: data as string };
 }
 
 // --------------------------------------------------------------- metodología

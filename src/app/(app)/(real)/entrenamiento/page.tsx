@@ -65,6 +65,17 @@ async function Contenido() {
                       Ver grupo
                     </Link>
                   </div>
+                  {hayMetodologia && activos.length > 0 && (
+                    <div className="px-4 pt-2">
+                      <Link
+                        href={`/entrenamiento/evaluar/${g.id}`}
+                        aria-label={`Evaluar el grupo ${g.nombre}`}
+                        className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-electrico px-5 text-sm font-bold text-noche"
+                      >
+                        Evaluar el grupo ({activos.length})
+                      </Link>
+                    </div>
+                  )}
                   {activos.length === 0 ? (
                     <p className="px-4 pb-4 text-sm text-tenue">Sin jugadores activos.</p>
                   ) : (

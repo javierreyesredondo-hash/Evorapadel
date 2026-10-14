@@ -184,6 +184,34 @@ test.describe("Evaluación e informe en el móvil @movil", () => {
   });
 });
 
+test.describe("Evaluación en cadena en el móvil @movil", () => {
+  test("formulario, propuesta de informe y confirmación: caben, controles táctiles, barra que no tapa y accesibilidad", async ({ page }) => {
+    const sb = await clienteComo("DIRECTOR_A");
+    const { data: esc } = await sb.from("escuelas").select("id").single();
+    const s = unico();
+    const { data: g } = await sb.from("grupos").insert({ escuela_id: esc!.id, nombre: `Móvil cadena ${s}` }).select("id").single();
+    for (const n of ["Uno", "Dos"]) {
+      const { data: j } = await sb.from("jugadores").insert({ escuela_id: esc!.id, nombre: `${n} ${s}` }).select("id").single();
+      await sb.from("grupo_jugadores").insert({ escuela_id: esc!.id, grupo_id: g!.id, jugador_id: j!.id });
+    }
+    await page.goto(`/entrenamiento/evaluar/${g!.id}`);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    for (const [c, n] of [["Golpes de fondo", 4], ["Juego en la red", 2], ["Juego aéreo", 3], ["Lectura táctica", 3]] as const) {
+      await page.getByRole("radio", { name: new RegExp(`^${c}: ${n} `) }).tap();
+    }
+    await page.getByRole("group").first().waitFor();
+    await sinDesbordamiento(page);
+    expect(await controlesPequenos(page), "controles por debajo de 44 px en la cadena").toEqual([]);
+    await sinInfraccionesAxe(page, "evaluación en cadena");
+    await noTapado(page, "Guardar evaluación");
+    await page.getByRole("button", { name: "Guardar evaluación" }).tap();
+    await expect(page.getByRole("heading", { name: "✓ Guardada" })).toBeVisible();
+    await sinDesbordamiento(page);
+    expect(await controlesPequenos(page), "controles por debajo de 44 px tras guardar").toEqual([]);
+    await sinInfraccionesAxe(page, "evaluación en cadena guardada");
+  });
+});
+
 test.describe("Importar metodología en el móvil @movil", () => {
   test("revisión de la propuesta y ficha de la metodología: caben, controles táctiles y accesibilidad", async ({ page }) => {
     // Solo se analiza (no se guarda nada) y un borrador por la API: la escuela A no activa nada.

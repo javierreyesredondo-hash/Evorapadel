@@ -188,3 +188,29 @@ test("envolver: respeta saltos de línea y parte palabras imposibles", () => {
   assert.deepEqual(envolver("a\n\nb", medir, 10), ["a", "", "b"]);
   assert.deepEqual(envolver("abcdefghij", medir, 4), ["abcd", "efgh", "ij"]);
 });
+
+test("interpretación técnica y origen de la redacción: en su orden y solo si existen", async () => {
+  const r = await generarPdfInforme(
+    {
+      ...base,
+      interpretacion: "Interpretación sintética del perfil.",
+      redaccion: { version: 2, guardada: "2026-10-02T10:00:00Z", origen: "revisada" },
+    },
+    await cargarFuentes(),
+  );
+  guardar("informe-interpretacion.pdf", r.bytes);
+  comprobarGeometria(r.trazas);
+  const t = textos(r.trazas);
+  const pos = (s: string) => t.indexOf(s);
+  for (const s of ["FORTALEZAS", "ASPECTOS A MEJORAR", "INTERPRETACIÓN TÉCNICA", "Interpretación sintética del perfil.", "OBJETIVOS DE MEJORA", "OBSERVACIONES DEL ENTRENADOR/A"]) {
+    assert.ok(pos(s) >= 0, `falta «${s}» en:\n${t}`);
+  }
+  assert.ok(pos("ASPECTOS A MEJORAR") < pos("INTERPRETACIÓN TÉCNICA") && pos("INTERPRETACIÓN TÉCNICA") < pos("OBJETIVOS DE MEJORA"));
+  const seguido = t.replace(/\n/g, " "); // el párrafo se reparte en varias líneas
+  assert.match(seguido, /propuestos automáticamente a partir de las puntuaciones y revisados por el entrenador\/a/);
+  assert.match(seguido, /versión 2/);
+
+  // Evaluación anterior a las versiones (sin interpretación ni redacción guardada): nada nuevo.
+  const antiguo = textos((await generarPdfInforme(base, await cargarFuentes())).trazas);
+  assert.doesNotMatch(antiguo, /INTERPRETACIÓN TÉCNICA|automáticamente/);
+});

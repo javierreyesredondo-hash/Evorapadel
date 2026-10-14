@@ -1,6 +1,7 @@
 import "server-only";
 import { esUuid } from "@/lib/gestion";
 import { escalaDe, type Escala } from "@/lib/metodologia";
+import { escalaDescrita, type EscalaDescrita } from "@/lib/redaccion";
 import type { ContenidoMetodologia } from "@/lib/metodologias/modelo";
 import type { ContextoEscuela, Resultado } from "@/lib/supabase/gestion";
 
@@ -79,7 +80,7 @@ export async function obtenerMetodologia(ctx: ContextoEscuela, id: string): Prom
 /** Metodología activa (para la escala de las evaluaciones nuevas), o null. */
 export async function metodologiaActiva(
   ctx: ContextoEscuela,
-): Promise<Resultado<{ id: string; nombre: string; version: string; escala: Escala } | null>> {
+): Promise<Resultado<{ id: string; nombre: string; version: string; escala: Escala; niveles: EscalaDescrita } | null>> {
   const { data, error } = await ctx.supabase
     .from("metodologias")
     .select("id, nombre, version, escala:contenido->escala")
@@ -91,7 +92,11 @@ export async function metodologiaActiva(
     return { ok: false, mensaje: ERROR_LECTURA };
   }
   if (!data) return { ok: true, datos: null };
-  return { ok: true, datos: { id: data.id as string, nombre: data.nombre as string, version: data.version as string, escala: escalaDe(data.escala) } };
+  const escala = escalaDe(data.escala);
+  return {
+    ok: true,
+    datos: { id: data.id as string, nombre: data.nombre as string, version: data.version as string, escala, niveles: escalaDescrita(escala, data.escala) },
+  };
 }
 
 /** ¿Ya se importó este PDF en la escuela? (misma huella SHA-256) */
