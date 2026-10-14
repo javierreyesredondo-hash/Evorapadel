@@ -40,13 +40,14 @@ async function Contenido({ params }: { params: Promise<{ id: string }> }) {
           {entrenador ? nombreMiembro(entrenador, ctx.usuarioId) : "Sin entrenador/a"}
         </p>
       </header>
-      {ctx.rol === "director" && (
-        <div className="mt-5">
+      <div className="mt-5 flex flex-wrap gap-3">
+        {g.jugadores.some((j) => j.activo) && <EnlaceBoton href={`/entrenamiento/evaluar/${g.id}`}>Evaluar el grupo</EnlaceBoton>}
+        {ctx.rol === "director" && (
           <EnlaceBoton href={`/grupos/${g.id}/editar`} variante="secundario">
             Editar grupo
           </EnlaceBoton>
-        </div>
-      )}
+        )}
+      </div>
 
       <Seccion titulo={`Jugadores (${g.jugadores.length})`}>
         {g.jugadores.length > 0 ? (

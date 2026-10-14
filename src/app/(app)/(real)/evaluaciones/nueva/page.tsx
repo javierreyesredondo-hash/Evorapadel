@@ -56,6 +56,7 @@ async function Contenido({ searchParams }: { searchParams: Promise<Record<string
       jugadores={evaluables}
       competencias={activas}
       escala={activa.datos?.escala}
+      niveles={activa.datos?.niveles}
       hoy={hoy}
       inicial={{
         jugadorId: pedido?.id ?? "",
@@ -65,6 +66,7 @@ async function Contenido({ searchParams }: { searchParams: Promise<Record<string
         titulo: "",
         fortalezas: "",
         mejoras: "",
+        interpretacion: "",
         observaciones: "",
         notas: {},
         objetivos: [],

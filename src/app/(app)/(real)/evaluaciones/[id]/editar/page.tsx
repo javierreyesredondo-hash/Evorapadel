@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { hoyIso } from "@/lib/format";
+import { escalaDescrita } from "@/lib/redaccion";
 import { contextoEscuela, listarJugadores } from "@/lib/supabase/gestion";
 import { listarCompetencias, obtenerEvaluacion, puedeEditar } from "@/lib/supabase/evaluaciones";
 import { metodologiaActiva } from "@/lib/supabase/metodologias";
@@ -50,6 +51,7 @@ async function Contenido({ params }: { params: Promise<{ id: string }> }) {
         jugadores={[{ id: ev.jugador.id, nombre: ev.jugador.nombre, grupos }]}
         competencias={permitidas}
         escala={escalaDe(ev.metodologia?.escala)}
+        niveles={escalaDescrita(escalaDe(ev.metodologia?.escala), ev.metodologia?.escala)}
         hoy={hoyIso()}
         inicial={{
           id: ev.id,
@@ -60,6 +62,7 @@ async function Contenido({ params }: { params: Promise<{ id: string }> }) {
           titulo: ev.titulo ?? "",
           fortalezas: ev.fortalezas ?? "",
           mejoras: ev.mejoras ?? "",
+          interpretacion: ev.interpretacion ?? "",
           observaciones: ev.observaciones ?? "",
           notas: Object.fromEntries(ev.puntuaciones.map((p) => [p.competenciaId, String(p.puntuacion)])),
           objetivos: ev.objetivos,

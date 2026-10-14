@@ -154,6 +154,7 @@ async function arrancar() {
     DIRECTOR_B: "director-b@evora.invalid",
     DIRECTOR_C: "director-c@evora.invalid",
     DIRECTOR_D: "director-d@evora.invalid",
+    DIRECTOR_E: "director-e@evora.invalid",
     SIN_ESCUELA: "sin-escuela@evora.invalid",
   };
   for (const email of Object.values(usuarios)) {
@@ -175,6 +176,9 @@ async function arrancar() {
   // Escuela D: importación de metodologías desde PDF (activarlas cambia las
   // competencias de la escuela; aislada para no afectar a las otras pruebas).
   psql(`select privado.crear_escuela_con_director('Escuela Demo D', '${usuarios.DIRECTOR_D}');`, "postgres");
+  // Escuela E: evaluación en cadena con una metodología importada activa (sus
+  // pruebas la activan; aislada de las demás).
+  psql(`select privado.crear_escuela_con_director('Escuela Demo E', '${usuarios.DIRECTOR_E}');`, "postgres");
   // Metodología de A, B y D: la base de la app (src/lib/metodologia.ts).
   const { METODOLOGIA_BASE } = await import("../src/lib/metodologia.ts");
   const valores = METODOLOGIA_BASE.map((c, i) =>

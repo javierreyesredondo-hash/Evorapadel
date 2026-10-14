@@ -22,10 +22,10 @@ test("la demostración ya no existe: sus antiguas fichas (/jugadores/j1) dan 404
 });
 
 test("fichas reales: UUID o «nuevo»; lo demás es 404 sin consultar la base de datos", () => {
-  for (const ruta of [`/jugadores/${UUID}`, "/jugadores/nuevo", `/grupos/${UUID}`, "/grupos/nuevo", `/evaluaciones/${UUID}`, "/evaluaciones/nueva", `/evaluaciones/${UUID}/pdf`, `/metodologia/importadas/${UUID}`, "/metodologia/importar", `/jugadores/${UUID}/editar`, "/jugadores", "/grupos"]) {
+  for (const ruta of [`/jugadores/${UUID}`, "/jugadores/nuevo", `/grupos/${UUID}`, "/grupos/nuevo", `/evaluaciones/${UUID}`, "/evaluaciones/nueva", `/evaluaciones/${UUID}/pdf`, `/metodologia/importadas/${UUID}`, "/metodologia/importar", `/entrenamiento/evaluar/${UUID}`, `/jugadores/${UUID}/editar`, "/jugadores", "/grupos"]) {
     assert.deepEqual(decidirRuta(ruta), { tipo: "seguir" }, ruta);
   }
-  for (const ruta of ["/jugadores/no-existe", "/jugadores/J1", "/grupos/abc", "/jugadores/x%27", "/jugadores/%E0%A4%A", "/grupos/%", "/evaluaciones/r1", "/evaluaciones/x%27", "/metodologia/importadas/abc"]) {
+  for (const ruta of ["/jugadores/no-existe", "/jugadores/J1", "/grupos/abc", "/jugadores/x%27", "/jugadores/%E0%A4%A", "/grupos/%", "/evaluaciones/r1", "/evaluaciones/x%27", "/metodologia/importadas/abc", "/entrenamiento/evaluar/grupo-x"]) {
     assert.deepEqual(decidirRuta(ruta), { tipo: "no-encontrado" }, ruta);
   }
 });

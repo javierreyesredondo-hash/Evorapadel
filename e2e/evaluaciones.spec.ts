@@ -89,8 +89,9 @@ test.describe("Evaluaciones reales", () => {
 
     await nota(page, "Golpes de fondo", 4).check();
     await nota(page, "Lectura táctica", 3).check();
-    await page.getByLabel("Fortalezas detectadas (opcional)").fill("Buena lectura del juego en defensa.");
-    await page.getByLabel("Áreas prioritarias de mejora (opcional)").fill("Volea de revés.");
+    // Con solo 2 notas la propuesta automática no señala fortalezas: el entrenador/a las escribe.
+    await page.getByLabel(/^Fortalezas/).fill("Buena lectura del juego en defensa.");
+    await page.getByLabel(/^Aspectos a mejorar/).fill("Volea de revés.");
     await page.getByLabel("Observaciones del entrenador/a (opcional)").fill("Sesión de prueba sintética.");
     await page.getByLabel("Objetivo 1").fill("Diez voleas seguidas sin error");
     await page.getByLabel("Plazo (opcional)").fill("2099-01-31");

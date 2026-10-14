@@ -28,6 +28,15 @@ Supabase, protegidos con RLS. No hay apartado de demostración ni datos ficticio
   éxito y transferencia, sesión, «no interpretado»), la guarda como borrador y
   la activa en un paso aparte. Las evaluaciones guardan la versión usada; una
   versión nueva no cambia las anteriores.
+- **Evaluación en cadena** (Mi entrenamiento → «Evaluar el grupo»): todos los
+  jugadores de un grupo, uno tras otro desde el móvil, con la escala y las
+  competencias de la metodología activa; guarda cada uno antes de avanzar,
+  reintenta sin duplicar y muestra (sin repetir) los ya evaluados hoy.
+- **Informe automático:** fortalezas, aspectos a mejorar e interpretación
+  técnica propuestos por un generador determinista local (sin IA ni servicios
+  externos) a partir de las puntuaciones y la escala; el entrenador/a solo
+  escribe observaciones y objetivo, y revisa el texto. Cada versión aprobada se
+  conserva (migración 5, sin aplicar en producción).
 - **Evaluaciones:** rápidas (en el entrenamiento, algunas competencias) o
   completas (todas). Notas 1–5, fortalezas, áreas de mejora, observaciones y
   hasta 5 objetivos con plazo. Historial en la ficha y comparación con la
