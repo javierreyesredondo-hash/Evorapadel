@@ -31,8 +31,9 @@ export async function ZonaPrivada({ children }: { children: ReactNode }) {
   }
 
   const [principal, ...otras] = sesion.membresias;
+  // Lo decide la base de datos (privado.administradores), nunca el navegador.
+  const admin = await esAdministrador();
   if (!principal) {
-    const admin = await esAdministrador();
     return (
       <Aviso titulo={admin ? "Panel de ÉVORA PADEL" : "Tu cuenta no tiene escuela"}>
         {admin ? (
@@ -61,6 +62,11 @@ export async function ZonaPrivada({ children }: { children: ReactNode }) {
         El acceso de <strong className="text-blanco">{principal.escuelaNombre}</strong> está suspendido temporalmente.
         Sus datos (jugadores, evaluaciones e informes) se conservan íntegros y volverán a estar disponibles al
         reactivarlo. Para más información, contacta con ÉVORA PADEL.
+        {admin && (
+          <span className="mt-4 block">
+            <EnlacePanel />
+          </span>
+        )}
         <BotonSalir />
       </Aviso>
     );
@@ -69,6 +75,12 @@ export async function ZonaPrivada({ children }: { children: ReactNode }) {
   return (
     <>
       <BarraEscuela membresia={principal} otras={otras.length} nombre={sesion.nombreVisible ?? sesion.email} />
+      {/* El propietario de ÉVORA también puede dirigir una escuela: acceso a su panel. */}
+      {admin && (
+        <div className="-mt-2 mb-4">
+          <EnlacePanel />
+        </div>
+      )}
       {children}
     </>
   );
@@ -96,6 +108,17 @@ function BarraEscuela({ membresia, otras, nombre }: { membresia: Membresia; otra
       </Link>
       <BotonSalir compacto />
     </section>
+  );
+}
+
+function EnlacePanel() {
+  return (
+    <Link
+      href="/admin"
+      className="flex min-h-11 w-full items-center justify-center rounded-full px-4 text-sm font-bold text-electrico ring-1 ring-electrico/60 transition-colors hover:bg-noche-600"
+    >
+      Panel de ÉVORA (administración)
+    </Link>
   );
 }
 
