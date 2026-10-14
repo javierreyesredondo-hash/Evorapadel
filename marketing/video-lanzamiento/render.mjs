@@ -135,7 +135,8 @@ console.log(`Renderizando ${TOTAL} fotogramas × ${SUB} submuestras con ${TRABAJ
 const paginas = await Promise.all(Array.from({ length: TRABAJADORES }, nuevaPagina));
 const listos = new Map();
 let siguiente = 0;
-let esperando = null;
+const VENTANA = TRABAJADORES * 6; // fotogramas que pueden adelantarse al que toca escribir
+let despertar = [];
 const inicio = Date.now();
 
 async function escribir(i, buf) {
@@ -150,13 +151,17 @@ async function escribir(i, buf) {
       process.stdout.write(`\r  ${(siguiente / SUB / FPS).toFixed(0)} s de ${linea.duracion} s · ${s.toFixed(0)} s transcurridos   `);
     }
   }
-  if (esperando && listos.size < TRABAJADORES * 4) esperando();
+  // Despierta a TODOS los hilos que esperaban: cada uno vuelve a comprobar su turno.
+  const esperan = despertar;
+  despertar = [];
+  esperan.forEach((r) => r());
 }
 
 await Promise.all(
   paginas.map(async (page, w) => {
     for (let i = w; i < tiempos.length; i += TRABAJADORES) {
-      while (listos.size >= TRABAJADORES * 8) await new Promise((r) => (esperando = r));
+      // Cada hilo espera según SU posición: el fotograma que toca escribir nunca espera.
+      while (i - siguiente >= VENTANA) await new Promise((r) => despertar.push(r));
       await escribir(i, await fotograma(page, tiempos[i]));
     }
   }),
