@@ -229,10 +229,28 @@ test.describe("Panel del propietario e invitaciones", () => {
     await contexto.close();
   });
 
+  test("un director que además es administrador ve el botón del panel y vuelve a su escuela", async ({ page }) => {
+    await entrar(page, "DIRECTOR_E");
+    const barra = page.getByRole("region", { name: "Tu escuela" });
+    await expect(barra).toContainText("Director/a");
+    const boton = page.getByRole("link", { name: "Panel de ÉVORA (administración)" });
+    await expect(boton).toBeVisible();
+    await comodaEnMovil(page, "inicio de un director administrador");
+    await boton.click();
+    await expect(page.getByRole("heading", { name: "Escuelas", level: 1 })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Crear escuela e invitación" })).toBeVisible();
+    await page.getByRole("link", { name: /^Volver a mi escuela/ }).click();
+    await expect(page.getByRole("region", { name: "Tu escuela" })).toBeVisible();
+    // En cualquier pantalla de su escuela sigue teniendo el acceso.
+    await page.goto("/jugadores");
+    await expect(page.getByRole("link", { name: "Panel de ÉVORA (administración)" })).toBeVisible();
+  });
+
   test("el panel global no existe para directores ni entrenadores", async ({ page }) => {
     for (const usuario of ["DIRECTOR_A", "ENTRENADOR_A"] as const) {
       await entrar(page, usuario);
       await expect(page.getByRole("region", { name: "Tu escuela" })).toBeVisible();
+      await expect(page.getByRole("link", { name: "Panel de ÉVORA (administración)" })).toHaveCount(0);
       await page.goto("/admin");
       await expect(page.getByRole("heading", { name: "Página no encontrada" })).toBeVisible();
       await expect(page.getByRole("button", { name: "Crear escuela e invitación" })).toHaveCount(0);

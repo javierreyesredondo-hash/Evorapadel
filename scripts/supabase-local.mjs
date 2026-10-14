@@ -181,7 +181,8 @@ async function arrancar() {
   // pruebas la activan; aislada de las demás).
   psql(`select privado.crear_escuela_con_director('Escuela Demo E', '${usuarios.DIRECTOR_E}');`, "postgres");
   // Propietario de ÉVORA (administrador global), dado de alta a mano como en producción.
-  psql(`insert into privado.administradores (usuario_id) select id from auth.users where email = '${usuarios.ADMIN}';`, "postgres");
+  // El propietario también puede dirigir una escuela: el director de E es además administrador.
+  psql(`insert into privado.administradores (usuario_id) select id from auth.users where email in ('${usuarios.ADMIN}', '${usuarios.DIRECTOR_E}');`, "postgres");
   // Metodología de A, B y D: la base de la app (src/lib/metodologia.ts).
   const { METODOLOGIA_BASE } = await import("../src/lib/metodologia.ts");
   const valores = METODOLOGIA_BASE.map((c, i) =>

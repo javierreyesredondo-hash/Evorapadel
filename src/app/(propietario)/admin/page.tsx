@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { RUTA_ACCESO, RUTA_SALIR } from "@/lib/acceso";
 import type { EstadoInvitacion } from "@/lib/invitaciones";
@@ -57,6 +58,12 @@ export default async function Page() {
           </form>
         }
       />
+      {/* Si el propietario también pertenece a una escuela, vuelve a ella desde aquí. */}
+      {sesion.membresias.length > 0 && (
+        <Link href="/" className="mb-4 flex min-h-11 items-center justify-center rounded-full px-4 text-sm font-bold text-electrico ring-1 ring-electrico/60 hover:bg-noche-600">
+          Volver a mi escuela ({sesion.membresias[0].escuelaNombre})
+        </Link>
+      )}
       <p className="mb-6 rounded-xl bg-noche-700 px-3 py-2 text-xs text-tenue ring-1 ring-noche-500">
         Todas las escuelas activas tienen las mismas funciones. Los pagos se gestionan fuera de la app (Bizum): aquí solo se
         suspende o reactiva el acceso, sin borrar datos. La app no envía correos: comparte tú el enlace de invitación.
