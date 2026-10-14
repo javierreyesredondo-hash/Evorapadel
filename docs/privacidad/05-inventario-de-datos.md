@@ -17,6 +17,8 @@
 | `competencias` | metodología de la escuela (nombres de criterios) | No | Definir qué se evalúa | — |
 | `escuelas` | nombre de la escuela | No (persona jurídica) | Separar los datos de cada escuela | — |
 | `perfiles`, `membresias` | nombre visible; escuela y rol (director/entrenador) | Sí (personal de la escuela) | Control de acceso; autor de los informes | — |
+| `invitaciones` (migración 6) | correo invitado a dirigir una escuela; fechas de creación, caducidad, aceptación o revocación; quién la creó y quién la aceptó. **El token no se guarda** (solo su hash) | Sí (correo de la persona invitada) | Dar acceso a la dirección de una escuela nueva | — [ELEGIR: plazo para borrar invitaciones caducadas o revocadas] |
+| `escuelas.estado` (migración 6) | activa / suspendida y fecha del cambio | No | Gestión administrativa del acceso (sin datos de pago ni bancarios) | — |
 
 **Texto libre (riesgo principal).** Fortalezas, mejoras, observaciones, foco y
 objetivos son campos abiertos:
@@ -56,6 +58,7 @@ objetivos son campos abiertos:
 | Entrenadores (no hay en el piloto) | App con su cuenta | Hoy, todos los jugadores y evaluaciones de su escuela. [ELEGIR: restringir a sus grupos en el futuro] |
 | Otras escuelas | — | **Ninguno** (RLS, con pruebas automáticas de aislamiento) |
 | Administración técnica | Panel de Supabase / *SQL Editor* | Acceso total a la base de datos. [COMPLETAR: quién tiene acceso al panel] |
+| Propietario de ÉVORA (panel `/admin`, migración 6) | App con su cuenta, dado de alta a mano | Nombre y estado de cada escuela, número de miembros y el correo y estado de sus invitaciones. **No** ve jugadores ni evaluaciones de las escuelas |
 | Familias | PDF que reciben | Solo el informe de su hijo o hija |
 
 ## 5. Dónde y con quién (proveedores)

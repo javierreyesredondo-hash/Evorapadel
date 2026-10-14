@@ -118,7 +118,7 @@ select prueba.ok(
   'todas las políticas son solo para authenticated (ninguna para anon ni public)');
 
 select prueba.ok(
-  (select count(*) from pg_policies where schemaname = 'public'
+  (select count(*) from pg_policies where schemaname = 'public' and permissive = 'PERMISSIVE'
      and tablename in ('escuelas', 'perfiles', 'membresias', 'jugadores', 'grupos', 'grupo_jugadores')) = 16,
   'existen exactamente las 16 políticas revisadas en las tablas de la migración 1');
 

@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-// Guardia del piloto: la app no ofrece registro público ni forma alguna de
-// concederse permisos. Solo entran usuarios creados a mano en Supabase, con una
-// membresía que asigna la dirección por SQL (ver supabase/README.md).
+// Guardia: la app no ofrece registro público ni forma alguna de concederse
+// permisos. Las cuentas las crea el propietario en Supabase o, con una
+// invitación válida de un solo uso, el servidor (src/lib/supabase/administracion.ts,
+// el ÚNICO archivo que puede usar la clave secreta). Membresías y escuelas solo
+// se crean con funciones de la base de datos que comprueban quién llama.
 
 const raiz = join(import.meta.dirname, "..");
 const fuentes = readdirSync(raiz, { recursive: true, encoding: "utf8" })
@@ -22,10 +24,23 @@ test("ningún registro público ni acceso por enlace mágico o invitación", () 
   }
 });
 
-test("ni API de administración de Auth ni clave secreta en la app", () => {
+const ADMINISTRACION = join("lib", "supabase", "administracion.ts");
+
+test("la clave secreta y la API de administración de Auth solo en administracion.ts", () => {
   for (const { ruta, texto } of fuentes) {
+    if (ruta === ADMINISTRACION) continue;
     assert.doesNotMatch(texto, /auth\.admin|SERVICE_ROLE|SUPABASE_SECRET/, ruta);
   }
+});
+
+test("administracion.ts: solo en el servidor, solo crea usuarios y la clave no es pública", () => {
+  const texto = fuentes.find((f) => f.ruta === ADMINISTRACION)?.texto ?? "";
+  assert.match(texto, /^import "server-only";/);
+  assert.deepEqual([...texto.matchAll(/auth\.admin\.(\w+)/g)].map((m) => m[1]), ["createUser"]);
+  assert.doesNotMatch(texto, /NEXT_PUBLIC_SUPABASE_SECRET|NEXT_PUBLIC_[A-Z_]*SERVICE/);
+  // Solo lo importa la acción de invitaciones.
+  const usos = fuentes.filter((f) => f.ruta !== ADMINISTRACION && /supabase\/administracion/.test(f.texto)).map((f) => f.ruta);
+  assert.deepEqual(usos, ["app/acciones-invitaciones.ts"]);
 });
 
 test("la app no escribe membresías ni escuelas (las asigna la dirección por SQL)", () => {

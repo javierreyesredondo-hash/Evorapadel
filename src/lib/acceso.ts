@@ -129,13 +129,15 @@ export function destinoTrasAcceso(siguiente: unknown): string {
 // ------------------------------------------------------------- Membresías
 
 export type Rol = "director" | "entrenador";
-export type Membresia = { escuelaId: string; escuelaNombre: string; rol: Rol };
+/** suspendida: el propietario de ÉVORA ha suspendido el acceso de la escuela (sus datos se conservan). */
+export type Membresia = { escuelaId: string; escuelaNombre: string; rol: Rol; suspendida: boolean };
 
 export const NOMBRE_ROL: Record<Rol, string> = { director: "Director/a", entrenador: "Entrenador/a" };
 
 /**
- * Convierte la respuesta de PostgREST («rol, escuela:escuelas(id, nombre)») en
- * membresías válidas, descartando filas incompletas. Ordena por nombre de escuela.
+ * Convierte la respuesta de PostgREST («rol, escuela:escuelas(id, nombre, estado)»)
+ * en membresías válidas, descartando filas incompletas. Primero las escuelas
+ * activas y después por nombre (la primera es la escuela con la que se trabaja).
  */
 export function normalizarMembresias(filas: unknown): Membresia[] {
   if (!Array.isArray(filas)) return [];
@@ -146,11 +148,13 @@ export function normalizarMembresias(filas: unknown): Membresia[] {
     if (rol !== "director" && rol !== "entrenador") continue;
     const e = Array.isArray(escuela) ? escuela[0] : escuela;
     if (typeof e !== "object" || e === null) continue;
-    const { id, nombre } = e as { id?: unknown; nombre?: unknown };
+    const { id, nombre, estado } = e as { id?: unknown; nombre?: unknown; estado?: unknown };
     if (typeof id !== "string" || typeof nombre !== "string" || nombre.trim() === "") continue;
-    resultado.push({ escuelaId: id, escuelaNombre: nombre, rol });
+    resultado.push({ escuelaId: id, escuelaNombre: nombre, rol, suspendida: estado === "suspendida" });
   }
-  return resultado.sort((a, b) => a.escuelaNombre.localeCompare(b.escuelaNombre, "es"));
+  return resultado.sort(
+    (a, b) => Number(a.suspendida) - Number(b.suspendida) || a.escuelaNombre.localeCompare(b.escuelaNombre, "es"),
+  );
 }
 
 /** Errores de PostgREST/PostgreSQL que indican que el esquema no es el esperado. */

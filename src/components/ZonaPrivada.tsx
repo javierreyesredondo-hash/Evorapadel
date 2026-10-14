@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { NOMBRE_ROL, RUTA_ACCESO, RUTA_SALIR, type Membresia } from "@/lib/acceso";
-import { obtenerSesion } from "@/lib/supabase/sesion";
+import { esAdministrador, obtenerSesion } from "@/lib/supabase/sesion";
 
 /** Comprueba la sesión en el servidor y solo entonces muestra la zona privada. */
 export async function ZonaPrivada({ children }: { children: ReactNode }) {
@@ -32,10 +32,35 @@ export async function ZonaPrivada({ children }: { children: ReactNode }) {
 
   const [principal, ...otras] = sesion.membresias;
   if (!principal) {
+    const admin = await esAdministrador();
     return (
-      <Aviso titulo="Tu cuenta no tiene escuela">
-        Has iniciado sesión como <strong className="text-blanco">{sesion.email}</strong>, pero todavía no
-        perteneces a ninguna escuela. Pide a la dirección de tu escuela que te dé acceso.
+      <Aviso titulo={admin ? "Panel de ÉVORA PADEL" : "Tu cuenta no tiene escuela"}>
+        {admin ? (
+          <>
+            Tu cuenta no pertenece a ninguna escuela, pero eres administrador/a de ÉVORA PADEL.
+            <span className="mt-4 block">
+              <Link href="/admin" className="inline-flex min-h-11 items-center rounded-full bg-electrico px-5 text-sm font-bold text-noche">
+                Ir al panel de escuelas
+              </Link>
+            </span>
+          </>
+        ) : (
+          <>
+            Has iniciado sesión como <strong className="text-blanco">{sesion.email}</strong>, pero todavía no
+            perteneces a ninguna escuela. Pide a la dirección de tu escuela que te dé acceso.
+          </>
+        )}
+        <BotonSalir />
+      </Aviso>
+    );
+  }
+  // Las escuelas activas van primero: si la primera está suspendida, lo están todas.
+  if (principal.suspendida) {
+    return (
+      <Aviso titulo="Acceso suspendido">
+        El acceso de <strong className="text-blanco">{principal.escuelaNombre}</strong> está suspendido temporalmente.
+        Sus datos (jugadores, evaluaciones e informes) se conservan íntegros y volverán a estar disponibles al
+        reactivarlo. Para más información, contacta con ÉVORA PADEL.
         <BotonSalir />
       </Aviso>
     );

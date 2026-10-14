@@ -178,11 +178,16 @@ test.describe("Claves", () => {
     page.on("response", async (r) => {
       if (r.request().resourceType() === "script") scripts.push(await r.text());
     });
-    await page.goto("/acceso");
-    await page.waitForLoadState("networkidle");
+    // Incluidas la página de invitación (que usa el servidor con la clave secreta) y el acceso.
+    for (const ruta of ["/acceso", "/invitacion"]) {
+      await page.goto(ruta);
+      await page.waitForLoadState("networkidle");
+    }
     expect(scripts.length).toBeGreaterThan(0);
+    const secreta = process.env.SUPABASE_SECRET_KEY;
     for (const codigo of scripts) {
-      expect(codigo).not.toMatch(/service_role|sb_secret_|SERVICE_ROLE/);
+      expect(codigo).not.toMatch(/service_role|sb_secret_|SERVICE_ROLE|SUPABASE_SECRET_KEY/);
+      if (secreta) expect(codigo.includes(secreta)).toBe(false);
     }
   });
 });

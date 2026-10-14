@@ -104,9 +104,17 @@ test("membresías: normaliza la respuesta de PostgREST y descarta filas inválid
     "basura",
   ];
   assert.deepEqual(normalizarMembresias(filas), [
-    { escuelaId: "a", escuelaNombre: "Escuela A", rol: "director" },
-    { escuelaId: "b", escuelaNombre: "Escuela B", rol: "entrenador" },
+    { escuelaId: "a", escuelaNombre: "Escuela A", rol: "director", suspendida: false },
+    { escuelaId: "b", escuelaNombre: "Escuela B", rol: "entrenador", suspendida: false },
   ]);
+  // Una escuela suspendida va después de las activas (no es la escuela con la que se trabaja).
+  assert.deepEqual(
+    normalizarMembresias([
+      { rol: "director", escuela: { id: "a", nombre: "Academia A", estado: "suspendida" } },
+      { rol: "entrenador", escuela: { id: "z", nombre: "Zeta", estado: "activa" } },
+    ]).map((m) => [m.escuelaId, m.suspendida]),
+    [["z", false], ["a", true]],
+  );
   assert.deepEqual(normalizarMembresias(null), []);
   assert.deepEqual(normalizarMembresias({}), []);
 });
