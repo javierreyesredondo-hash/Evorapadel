@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { esRutaPublica, RUTA_ACCESO, RUTA_SALIR } from "@/lib/acceso";
 import { decidirRuta } from "@/lib/rutas";
+import { RUTA_INVITACION } from "@/lib/invitaciones";
 import { actualizarSesion, conSesion } from "@/lib/supabase/proxy";
 
 // Proxy (antes «middleware») de Next 16. Se ejecuta antes de renderizar:
@@ -20,8 +21,9 @@ export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const { respuesta, usuarioId } = await actualizarSesion(request);
 
-  // /salir cierra la sesión haya o no sesión; nunca se redirige.
-  if (pathname === RUTA_SALIR) return respuesta;
+  // /salir cierra la sesión haya o no sesión; nunca se redirige. La página de
+  // invitación sirve con y sin sesión (el token va en el fragmento «#»).
+  if (pathname === RUTA_SALIR || pathname === RUTA_INVITACION) return respuesta;
 
   if (!usuarioId && !esRutaPublica(pathname)) {
     const destino = new URL(RUTA_ACCESO, request.url);

@@ -34,7 +34,7 @@ export const obtenerSesion = cache(async (): Promise<Sesion> => {
     Promise.all([
       supabase
         .from("membresias")
-        .select("rol, escuela:escuelas!inner(id, nombre)")
+        .select("rol, escuela:escuelas!inner(id, nombre, estado)")
         // Filtro por el id VERIFICADO del servidor; RLS lo aplicaría igualmente.
         .eq("usuario_id", usuarioId),
       supabase.from("perfiles").select("nombre_visible").eq("id", usuarioId).maybeSingle(),
@@ -67,3 +67,18 @@ export const obtenerSesion = cache(async (): Promise<Sesion> => {
 function esTokenDelFuturo(error: { code?: string; message?: string } | null) {
   return error?.code === "PGRST303" && /future/i.test(error.message ?? "");
 }
+
+/**
+ * ¿Es el usuario actual administrador global de ÉVORA? Lo decide la base de
+ * datos (privado.administradores, alta solo por SQL); nunca el navegador.
+ */
+export const esAdministrador = cache(async (): Promise<boolean> => {
+  const supabase = await crearClienteServidor();
+  if (!supabase) return false;
+  const { data, error } = await supabase.rpc("soy_administrador");
+  if (error) {
+    console.error("ÉVORA PADEL: error al comprobar el administrador", error.code);
+    return false;
+  }
+  return data === true;
+});

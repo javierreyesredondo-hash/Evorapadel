@@ -36,8 +36,8 @@ select prueba.ok((select relrowsecurity from pg_class where oid = 'public.metodo
   'RLS activado en metodologias');
 
 select prueba.ok(
-  (select count(*) from pg_policies where schemaname = 'public' and tablename = 'metodologias') = 3
-  and not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'metodologias' and cmd in ('DELETE', 'ALL')),
+  (select count(*) from pg_policies where schemaname = 'public' and permissive = 'PERMISSIVE' and tablename = 'metodologias') = 3
+  and not exists (select 1 from pg_policies where schemaname = 'public' and permissive = 'PERMISSIVE' and tablename = 'metodologias' and cmd in ('DELETE', 'ALL')),
   'metodologias: exactamente 3 políticas (leer, crear y editar) y ninguna de borrado');
 
 select prueba.ok(

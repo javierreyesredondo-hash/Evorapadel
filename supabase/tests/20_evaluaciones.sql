@@ -49,12 +49,12 @@ select prueba.ok(
   'RLS activado en competencias, evaluaciones, puntuaciones y objetivos');
 
 select prueba.ok(
-  (select count(*) from pg_policies where schemaname = 'public'
+  (select count(*) from pg_policies where schemaname = 'public' and permissive = 'PERMISSIVE'
      and tablename in ('competencias', 'evaluaciones', 'evaluacion_puntuaciones', 'evaluacion_objetivos')) = 12,
   'existen exactamente las 12 políticas revisadas de la migración 3');
 
 select prueba.ok(
-  not exists (select 1 from pg_policies where schemaname = 'public'
+  not exists (select 1 from pg_policies where schemaname = 'public' and permissive = 'PERMISSIVE'
               and tablename in ('competencias', 'evaluaciones') and cmd in ('DELETE', 'ALL')),
   'no hay políticas de borrado de competencias ni de evaluaciones');
 

@@ -40,7 +40,8 @@ export const contextoEscuela = cache(async (): Promise<ContextoEscuela | null> =
   const sesion = await obtenerSesion();
   if (sesion.estado !== "ok") return null;
   const activa = sesion.membresias[0];
-  if (!activa) return null;
+  // Escuela suspendida por el propietario: sin acceso operativo (RLS lo impone también).
+  if (!activa || activa.suspendida) return null;
   const supabase = await crearClienteServidor();
   if (!supabase) return null;
   return {

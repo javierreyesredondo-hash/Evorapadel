@@ -155,6 +155,7 @@ async function arrancar() {
     DIRECTOR_C: "director-c@evora.invalid",
     DIRECTOR_D: "director-d@evora.invalid",
     DIRECTOR_E: "director-e@evora.invalid",
+    ADMIN: "propietario@evora.invalid",
     SIN_ESCUELA: "sin-escuela@evora.invalid",
   };
   for (const email of Object.values(usuarios)) {
@@ -179,6 +180,8 @@ async function arrancar() {
   // Escuela E: evaluación en cadena con una metodología importada activa (sus
   // pruebas la activan; aislada de las demás).
   psql(`select privado.crear_escuela_con_director('Escuela Demo E', '${usuarios.DIRECTOR_E}');`, "postgres");
+  // Propietario de ÉVORA (administrador global), dado de alta a mano como en producción.
+  psql(`insert into privado.administradores (usuario_id) select id from auth.users where email = '${usuarios.ADMIN}';`, "postgres");
   // Metodología de A, B y D: la base de la app (src/lib/metodologia.ts).
   const { METODOLOGIA_BASE } = await import("../src/lib/metodologia.ts");
   const valores = METODOLOGIA_BASE.map((c, i) =>
@@ -193,6 +196,8 @@ async function arrancar() {
     `NEXT_PUBLIC_SUPABASE_URL=${URL_PUBLICA}`,
     `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${anon}`,
     `E2E_CONTRASENA=${contrasena}`,
+    // Clave secreta LOCAL (solo servidor): permite crear la cuenta de un director invitado.
+    `SUPABASE_SECRET_KEY=${servicio}`,
     ...Object.entries(usuarios).map(([k, v]) => `E2E_EMAIL_${k}=${v}`),
   ];
   writeFileSync(envArchivo, `${lineas.join("\n")}\n`);

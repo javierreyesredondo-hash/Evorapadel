@@ -38,8 +38,8 @@ select prueba.ok((select relrowsecurity from pg_class where oid = 'public.evalua
   'RLS activado en evaluacion_redacciones');
 
 select prueba.ok(
-  (select count(*) from pg_policies where schemaname = 'public' and tablename = 'evaluacion_redacciones') = 2
-  and not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'evaluacion_redacciones'
+  (select count(*) from pg_policies where schemaname = 'public' and permissive = 'PERMISSIVE' and tablename = 'evaluacion_redacciones') = 2
+  and not exists (select 1 from pg_policies where schemaname = 'public' and permissive = 'PERMISSIVE' and tablename = 'evaluacion_redacciones'
                   and cmd in ('UPDATE', 'DELETE', 'ALL')),
   'evaluacion_redacciones: solo leer y añadir (ninguna política de cambio ni borrado)');
 

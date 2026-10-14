@@ -37,6 +37,11 @@ Supabase, protegidos con RLS. No hay apartado de demostración ni datos ficticio
   externos) a partir de las puntuaciones y la escala; el entrenador/a solo
   escribe observaciones y objetivo, y revisa el texto. Cada versión aprobada se
   conserva (migración 5, sin aplicar en producción).
+- **Alta de escuelas e invitaciones** (propietario de ÉVORA, panel `/admin`):
+  crear escuelas, invitar a su director con un enlace privado de un solo uso,
+  ver el estado de cada invitación y suspender o reactivar el acceso de una
+  escuela sin borrar datos. Sin planes ni pasarela de pago (migración 6, sin
+  aplicar en producción).
 - **Evaluaciones:** rápidas (en el entrenamiento, algunas competencias) o
   completas (todas). Notas 1–5, fortalezas, áreas de mejora, observaciones y
   hasta 5 objetivos con plazo. Historial en la ficha y comparación con la
