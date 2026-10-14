@@ -1,0 +1,124 @@
+{
+  "inicio": {
+    "arriba": 57,
+    "abajo": 66,
+    "alto": 1016
+  },
+  "jugadores": {
+    "arriba": 57,
+    "abajo": 66,
+    "alto": 1318
+  },
+  "jugador": {
+    "arriba": 57,
+    "abajo": 66,
+    "alto": 1424
+  },
+  "grupos": {
+    "arriba": 57,
+    "abajo": 66,
+    "alto": 844
+  },
+  "evaluaciones": {
+    "arriba": 57,
+    "abajo": 66,
+    "alto": 1380
+  },
+  "evaluacion": {
+    "arriba": 57,
+    "abajo": 66,
+    "alto": 2762
+  },
+  "informe": {
+    "arriba": 57,
+    "abajo": 66,
+    "alto": 3238
+  },
+  "metodologia": {
+    "arriba": 57,
+    "abajo": 66,
+    "alto": 1906
+  },
+  "entrenamiento": {
+    "arriba": 57,
+    "abajo": 66,
+    "alto": 2207
+  },
+  "cadena-0": {
+    "arriba": 57,
+    "abajo": 141,
+    "alto": 2574
+  },
+  "cadena-1": {
+    "arriba": 57,
+    "abajo": 141,
+    "alto": 2632
+  },
+  "cadena-2": {
+    "arriba": 57,
+    "abajo": 141,
+    "alto": 2632
+  },
+  "cadena-3": {
+    "arriba": 57,
+    "abajo": 141,
+    "alto": 2632
+  },
+  "cadena-4": {
+    "arriba": 57,
+    "abajo": 141,
+    "alto": 2632
+  },
+  "cadena-5": {
+    "arriba": 57,
+    "abajo": 141,
+    "alto": 2632
+  },
+  "cadena-6": {
+    "arriba": 57,
+    "abajo": 141,
+    "alto": 2574
+  },
+  "cadenaZonas": {
+    "tarjetas": [
+      {
+        "nombre": "Golpes de fondo",
+        "y": 579,
+        "alto": 138
+      },
+      {
+        "nombre": "Juego en la red",
+        "y": 729,
+        "alto": 122
+      },
+      {
+        "nombre": "Juego aéreo",
+        "y": 863,
+        "alto": 122
+      },
+      {
+        "nombre": "Lectura táctica",
+        "y": 997,
+        "alto": 138
+      },
+      {
+        "nombre": "Condición física",
+        "y": 1147,
+        "alto": 138
+      },
+      {
+        "nombre": "Fortaleza mental",
+        "y": 1297,
+        "alto": 122
+      }
+    ],
+    "fortalezas": 1841,
+    "mejoras": 1989,
+    "interpretacion": 2137
+  },
+  "admin": {
+    "arriba": 57,
+    "abajo": 0,
+    "alto": 2963
+  }
+}

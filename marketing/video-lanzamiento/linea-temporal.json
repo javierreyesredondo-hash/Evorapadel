@@ -1,0 +1,30 @@
+{
+  "comentario": "Fuente única de tiempos (segundos). La usan las escenas (escenas/) y la música (audio/componer.py) para que imagen y sonido vayan sincronizados.",
+  "fps": 30,
+  "duracion": 28,
+  "bpm": 120,
+  "escenas": [
+    { "id": "marca", "inicio": 0, "fin": 3 },
+    { "id": "problema", "inicio": 3, "fin": 6 },
+    { "id": "conectado", "inicio": 6, "fin": 10 },
+    { "id": "evaluacion", "inicio": 10, "fin": 14 },
+    { "id": "informes", "inicio": 14, "fin": 18 },
+    { "id": "metodologia", "inicio": 18, "fin": 22 },
+    { "id": "cierre", "inicio": 22, "fin": 28 }
+  ],
+  "eventos": {
+    "logoBola": 1.15,
+    "logoTexto": 1.35,
+    "ordenar": 5.25,
+    "conexiones": [6.5, 6.875, 7.25, 7.625, 8.0],
+    "toques": [10.875, 11.125, 11.375, 11.75, 12.0, 12.25],
+    "propuesta": [12.75, 13.0, 13.25],
+    "pdfSale": 14.25,
+    "resaltes": [15.25, 15.875, 16.875],
+    "graficas": [18.25, 19.0, 19.75],
+    "decision": 20.5,
+    "lineaCierre": 22.375,
+    "lema": 23.25,
+    "cierreSecundario": 24.25
+  }
+}

@@ -1,0 +1,64 @@
+/* Tipografías de la marca (SIL OFL 1.1, @fontsource): Barlow Condensed para
+   titulares (la «display» de la app), Inter para textos, Caveat para las notas
+   a mano de la escena del problema. */
+@font-face { font-family: "Barlow Condensed"; font-weight: 700; font-style: italic; src: url("../node_modules/@fontsource/barlow-condensed/files/barlow-condensed-latin-700-italic.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 800; font-style: italic; src: url("../node_modules/@fontsource/barlow-condensed/files/barlow-condensed-latin-800-italic.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 700; font-style: normal; src: url("../node_modules/@fontsource/barlow-condensed/files/barlow-condensed-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-weight: 400; src: url("../node_modules/@fontsource/inter/files/inter-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-weight: 500; src: url("../node_modules/@fontsource/inter/files/inter-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-weight: 600; src: url("../node_modules/@fontsource/inter/files/inter-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-weight: 700; src: url("../node_modules/@fontsource/inter/files/inter-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Caveat"; font-weight: 600; src: url("../node_modules/@fontsource/caveat/files/caveat-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Caveat"; font-weight: 700; src: url("../node_modules/@fontsource/caveat/files/caveat-latin-700-normal.woff2") format("woff2"); }
+
+:root {
+  --noche: #101b2c;
+  --noche-700: #16243a;
+  --noche-600: #1d2e48;
+  --noche-500: #2a3d5c;
+  --lima: #c7ff32;
+  --naranja: #ff824c;
+  --blanco: #ffffff;
+  --tenue: #a9b4c6;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--noche); }
+body { font-family: "Inter", sans-serif; color: var(--blanco); -webkit-font-smoothing: antialiased; }
+
+#lienzo { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: var(--noche); isolation: isolate; }
+.capa { position: absolute; inset: 0; pointer-events: none; }
+.escena { position: absolute; inset: 0; overflow: hidden; visibility: hidden; }
+.escenario3d { position: absolute; inset: 0; perspective: 1500px; perspective-origin: 50% 50%; }
+.p3d { position: absolute; transform-style: preserve-3d; }
+.centro { left: 50%; top: 50%; }
+
+/* Titulares */
+.titular {
+  position: absolute; left: 60px; right: 60px; text-align: center;
+  font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-style: italic;
+  text-transform: uppercase; letter-spacing: -0.5px; color: var(--blanco);
+  text-shadow: 0 6px 40px rgba(5, 10, 20, 0.85), 0 2px 6px rgba(5, 10, 20, 0.6);
+  z-index: 50;
+}
+.titular-linea { display: block; white-space: nowrap; }
+.titular-mascara { display: inline-block; overflow: hidden; vertical-align: top; padding: 0 0.06em 0.06em; margin: 0 -0.02em; }
+.titular-palabra { display: inline-block; will-change: transform, opacity, filter; }
+.titular-palabra.lima { color: var(--lima); }
+.titular-palabra.naranja { color: var(--naranja); }
+
+.etiqueta {
+  font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-style: italic;
+  text-transform: uppercase; letter-spacing: 1px;
+}
+
+/* Tarjetas de cristal */
+.cristal {
+  background: linear-gradient(155deg, rgba(42, 61, 92, 0.78), rgba(22, 36, 58, 0.88) 55%, rgba(16, 27, 44, 0.92));
+  border: 1.5px solid rgba(169, 180, 198, 0.22);
+  border-radius: 28px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.cristal.lima-borde { border-color: rgba(199, 255, 50, 0.55); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), 0 0 40px rgba(199, 255, 50, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.12); }
+
+img { display: block; }
